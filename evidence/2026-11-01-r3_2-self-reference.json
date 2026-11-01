@@ -1,0 +1,15 @@
+{
+  "experiment": "R3.2 改进算子自指性",
+  "description": "判定 agent 能否用自身记忆改进自身行为（外循环层面）",
+  "n_trials": 1000,
+  "n_episodes": 5,
+  "results": {
+    "no_memory": 0.025,
+    "self_improve": 0.262,
+    "external_knowledge": 0.169
+  },
+  "self_reference_gain": 0.23700000000000002,
+  "external_gain": 0.14400000000000002,
+  "verdict": "SELF_REFERENTIAL",
+  "explanation": "self_improve > no_memory：agent 能用自身记忆改进自身行为（自指外循环改进）。"
+}
