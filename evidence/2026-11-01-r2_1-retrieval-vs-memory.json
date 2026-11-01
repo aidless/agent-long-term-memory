@@ -1,0 +1,90 @@
+{
+  "experiment": "R2 检索 vs 记忆对照（判断②）",
+  "description": "对照「纯检索（RAG，查询驱动）」vs「记忆系统（自主整合+遗忘）」的长程检索成功率",
+  "method": "长程任务中 agent 需检索正确信息。存储含 N 条信息（含噪音）。pure_retrieval：查询→Jaccard 相似度检索，查询模糊（f<阈值）→失败，噪音多→精度下降。memory_system：信息整合（关联记忆，关联相似度=f+association_bonus）+遗忘管理（清理噪音）。比较两种模式在不同查询模糊度 f 与噪音比例下的检索成功率。",
+  "main_comparison": {
+    "n_items": 20,
+    "noise_ratio": 0.5,
+    "similarity_threshold": 0.3,
+    "association_bonus": 0.2,
+    "results": [
+      {
+        "query_overlap_words": 5,
+        "query_fuzziness_f": 1.0,
+        "pure_retrieval_rate": 1.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 0.0,
+        "n_trials": 1000
+      },
+      {
+        "query_overlap_words": 3,
+        "query_fuzziness_f": 0.429,
+        "pure_retrieval_rate": 1.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 0.0,
+        "n_trials": 1000
+      },
+      {
+        "query_overlap_words": 2,
+        "query_fuzziness_f": 0.25,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 1.0,
+        "n_trials": 1000
+      },
+      {
+        "query_overlap_words": 1,
+        "query_fuzziness_f": 0.111,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 1.0,
+        "n_trials": 1000
+      },
+      {
+        "query_overlap_words": 0,
+        "query_fuzziness_f": 0.0,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 0.0,
+        "memory_advantage": 0.0,
+        "n_trials": 1000
+      }
+    ]
+  },
+  "noise_sensitivity": {
+    "n_items": 20,
+    "sensitivity": [
+      {
+        "noise_ratio": 0.1,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 1.0
+      },
+      {
+        "noise_ratio": 0.3,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 1.0
+      },
+      {
+        "noise_ratio": 0.5,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 1.0
+      },
+      {
+        "noise_ratio": 0.7,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 1.0
+      },
+      {
+        "noise_ratio": 0.9,
+        "pure_retrieval_rate": 0.0,
+        "memory_system_rate": 1.0,
+        "memory_advantage": 1.0
+      }
+    ]
+  },
+  "conclusion": "若 memory_system > pure_retrieval：记忆系统在查询模糊/噪音多时更可靠，验证判断②（检索是查询驱动的，记忆通过整合/遗忘更自主）。",
+  "reproduce": "python3 research/02-memory-vs-retrieval/experiments/r2_1_retrieval_vs_memory.py"
+}
