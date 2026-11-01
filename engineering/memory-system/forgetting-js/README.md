@@ -1,3 +1,36 @@
+## v3 增强（2026-11-01）
+
+### 核心修复：REFERENCE_RELEVANCE 现在真正应用到评分
+
+v2 声明了 `REFERENCE_RELEVANCE=0.7` 但 `scoreMemory` 公式从未使用它，导致 6 个月零使用的
+reference 评分恒为 0.170 > 0.15 阈值——redundancy 项（0.15）+ drift 项（0.02）是恒定地板，
+任何零使用 reference 都 ≥0.17，**永远无法成为遗忘候选**（结构性缺陷）。
+
+v3 修复：reference 类型乘 `REFERENCE_RELEVANCE`，长未用 reference 真正低于阈值。
+
+### 新增：restore 路径（修复 v1→v2 过渡假阳性锁定）
+
+v1 单维衰减 patrol 曾误杀 9 条 reference（soft_forgotten_at 已设），但 v2 多维评分下它们
+score 全部 >0.15，且其中 3 条仅 1.1 天（最新记忆）。旧版 `softForgetEligible` 对
+`soft_forgotten_at` 非空的记忆短路返回 `already-soft-forgotten`，**永不重新评估**——被 v1
+永久锁住。
+
+v3 修复：`softForgetEligible` 检测到 soft_forgotten 但 v2 score ≥ 阈值时返回
+`{ eligible:false, reason:'restore', shouldRestore:true }`；`scanForgetting` 新增
+`restoreCandidates`（reason:'score-recovered'）。
+
+### 新增：可解释性诊断
+
+- `scoreBreakdown(row, usage, nowIso, ctx, params)` → `{ score, components(含 contribution), dominant, verdict, diagnostics }`，5 维贡献和恒等于 score。
+- `scoreBand(score, params)` → `{ band: forget-candidate/soft-zone/retained, pctAboveSoftForget }`，用于阈值敏感性分析。
+
+### 真实库验证
+
+真实库（44 active）：9 条 v1 误杀 reference 全部被 v3 识别为 restore 候选并恢复；
+v3 语义下 0 候选（真实库干净）。
+
+---
+
 # Selective Forgetting
 
 A memory system that selectively forgets beats one that only accumulates.
