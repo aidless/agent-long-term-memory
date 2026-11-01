@@ -1,0 +1,99 @@
+{
+  "experiment": "R1.3 记忆支撑长程（机械对照）",
+  "description": "对照「无记忆（仅上下文窗口）」vs「有记忆（长期记忆系统）」的长程任务完成率",
+  "method": "长程任务=k 步，每步需要先前某一步建立的事实。no_memory：事实仅存在于上下文窗口（容量 C），早期事实被逐出导致失败。with_memory：事实存入长期记忆跨步持久，检索命中率 r，但有污染概率 poison（返回错误事实导致步骤失败）。比较两种完成率。核心问题：记忆帮助还是损害长程任务？",
+  "main_comparison": {
+    "context_capacity": 5,
+    "memory_hit_rate": 0.95,
+    "memory_poison": 0.0,
+    "results": [
+      {
+        "steps": 10,
+        "no_memory_rate": 0.2058,
+        "with_memory_rate": 0.6193,
+        "memory_benefit": 0.4135,
+        "n_trials": 10000
+      },
+      {
+        "steps": 20,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.375,
+        "memory_benefit": 0.375,
+        "n_trials": 10000
+      },
+      {
+        "steps": 50,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.0823,
+        "memory_benefit": 0.0823,
+        "n_trials": 10000
+      }
+    ]
+  },
+  "poison_sensitivity": {
+    "n_steps": 20,
+    "sensitivity": [
+      {
+        "poison": 0.0,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.375,
+        "memory_benefit": 0.375
+      },
+      {
+        "poison": 0.01,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.3086,
+        "memory_benefit": 0.3086
+      },
+      {
+        "poison": 0.02,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.2557,
+        "memory_benefit": 0.2557
+      },
+      {
+        "poison": 0.05,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.1381,
+        "memory_benefit": 0.1381
+      },
+      {
+        "poison": 0.1,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.0493,
+        "memory_benefit": 0.0493
+      }
+    ]
+  },
+  "capacity_sensitivity": {
+    "n_steps": 20,
+    "sensitivity": [
+      {
+        "context_capacity": 3,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.375,
+        "memory_benefit": 0.375
+      },
+      {
+        "context_capacity": 5,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.375,
+        "memory_benefit": 0.375
+      },
+      {
+        "context_capacity": 10,
+        "no_memory_rate": 0.0264,
+        "with_memory_rate": 0.375,
+        "memory_benefit": 0.3486
+      },
+      {
+        "context_capacity": 20,
+        "no_memory_rate": 1.0,
+        "with_memory_rate": 0.375,
+        "memory_benefit": -0.625
+      }
+    ]
+  },
+  "conclusion": "若 with_memory > no_memory：记忆帮助长程（检索收益 > 污染代价）。若 with_memory < no_memory：记忆损害长程（污染代价 > 检索收益，呼应文献[1] 发现 (5)）。",
+  "reproduce": "python3 research/01-long-horizon-autonomy/experiments/r1_3_memory_benefit.py"
+}
