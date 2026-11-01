@@ -1,0 +1,28 @@
+{
+  "name": "selective-forgetting",
+  "version": "1.0.0",
+  "description": "Selective forgetting for agent memory stores: soft-forget + archive, multi-dimensional scoring, budget-aware overflow backfill.",
+  "type": "module",
+  "main": "src/forgetting/forgetting.js",
+  "exports": {
+    ".": "./src/forgetting/forgetting.js"
+  },
+  "files": [
+    "src/",
+    "test/"
+  ],
+  "scripts": {
+    "test": "node test/forgetting.test.mjs"
+  },
+  "keywords": [
+    "memory",
+    "forgetting",
+    "agent",
+    "context-management",
+    "llm"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  }
+}
