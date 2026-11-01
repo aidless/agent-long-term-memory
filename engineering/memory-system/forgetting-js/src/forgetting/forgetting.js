@@ -114,6 +114,73 @@ function daysSince(iso, nowIso) {
  * @param params - Overrides for the defaults.
  * @returns The score in [0, 1], plus the dimension factors for diagnostics.
  */
+
+/**
+ * Human-readable breakdown of a memory's v2 score.
+ * @param row - A memories row.
+ * @param usage - `{ useCount, lastUsedAt } | undefined`.
+ * @param nowIso - Reference instant.
+ * @param ctx - Context for extra dimensions (see scoreMemory).
+ * @param params - Overrides.
+ * @returns `{ score, components, dominant, verdict }` where `dominant` names the
+ *          dimension contributing most to the score and `verdict` is a
+ *          human-readable one-liner for the diagnostic log.
+ */
+export function scoreBreakdown(row, usage, nowIso, ctx = {}, params = {}) {
+    const d = scoreMemory(row, usage, nowIso, ctx, params);
+    const components = [
+        { name: "time", value: d.timeFactor, weight: (params.W_TIME ?? FORGETTING_DEFAULTS.W_TIME) },
+        { name: "usage", value: d.usageFactor, weight: (params.W_USAGE ?? FORGETTING_DEFAULTS.W_USAGE) },
+        { name: "redundancy", value: d.redundancyFactor, weight: (params.W_REDUNDANCY ?? FORGETTING_DEFAULTS.W_REDUNDANCY) },
+        { name: "reuse", value: d.reuseFactor, weight: (params.W_REUSE ?? FORGETTING_DEFAULTS.W_REUSE) },
+        { name: "drift", value: d.driftFactor, weight: (params.W_DRIFT ?? FORGETTING_DEFAULTS.W_DRIFT) },
+    ];
+    const relevance = row.type === "reference"
+        ? (params.REFERENCE_RELEVANCE ?? FORGETTING_DEFAULTS.REFERENCE_RELEVANCE)
+        : 1.0;
+    const contributions = components.map((c) => ({ ...c, contribution: c.value * c.weight * relevance }));
+    const dominant = [...contributions].sort((a, b) => b.contribution - a.contribution)[0];
+    const threshold = (params.SOFT_FORGET_SCORE ?? FORGETTING_DEFAULTS.SOFT_FORGET_SCORE);
+    let verdict;
+    if (d.score < threshold) {
+        verdict = `below soft-forget threshold (${d.score.toFixed(3)} < ${threshold})`;
+    } else if (d.daysSinceLastUse >= (params.SOFT_FORGET_DAYS ?? FORGETTING_DEFAULTS.SOFT_FORGET_DAYS) && d.useCount < 1) {
+        verdict = `long-unused (${d.daysSinceLastUse.toFixed(1)}d, zero use) but score ${d.score.toFixed(3)} >= threshold`;
+    } else {
+        verdict = `retained (score ${d.score.toFixed(3)})`;
+    }
+    return {
+        score: d.score,
+        components: contributions,
+        dominant: dominant.name,
+        verdict,
+        diagnostics: d,
+    };
+}
+
+/**
+ * Classify a score into a discrete band relative to the forget thresholds.
+ * Useful for threshold-sensitivity analysis and for surfacing borderline rows.
+ * @param score - The v2 score.
+ * @param params - Overrides.
+ * @returns `{ band, pctAboveSoftForget, softForgetScore, archiveScore }`.
+ */
+export function scoreBand(score, params = {}) {
+    const cfg = { ...FORGETTING_DEFAULTS, ...params };
+    const soft = cfg.SOFT_FORGET_SCORE;
+    const archive = 0.5; // archive is a stricter retention bar (hardcoded reference)
+    let band;
+    if (score < soft) band = "forget-candidate";
+    else if (score < archive) band = "soft-zone";
+    else band = "retained";
+    return {
+        band,
+        pctAboveSoftForget: ((score - soft) / Math.max(1e-9, soft)) * 100,
+        softForgetScore: soft,
+        archiveScore: archive,
+    };
+}
+
 export function scoreMemory(row, usage, nowIso, ctx = {}, params = {}) {
     const cfg = { ...FORGETTING_DEFAULTS, ...params };
     const useCount = usage?.useCount ?? 0;
@@ -137,13 +204,20 @@ export function scoreMemory(row, usage, nowIso, ctx = {}, params = {}) {
     const topicHits = activeTopics.some((t) => row.title.toLowerCase().includes(t.toLowerCase()) || row.description.toLowerCase().includes(t.toLowerCase()));
     const driftFactor = topicHits ? cfg.TOPIC_MATCH_BONUS : 0.2;
 
-    const score = Math.min(1,
+    const rawScore = Math.min(1,
         cfg.W_TIME * timeFactor
         + cfg.W_USAGE * usageFactor
         + cfg.W_REDUNDANCY * redundancyFactor
         + cfg.W_REUSE * reuseFactor
         + cfg.W_DRIFT * driftFactor
     );
+    // Reference-type memories are lower-value than user/feedback (they are
+    // external pointers, not identity/preferences). Apply a relevance floor
+    // so a long-unused reference genuinely drops below the soft-forget
+    // threshold instead of being held up by the redundancy/drift floor.
+    const score = row.type === "reference"
+        ? rawScore * (cfg.REFERENCE_RELEVANCE ?? FORGETTING_DEFAULTS.REFERENCE_RELEVANCE)
+        : rawScore;
     return {
         score,
         timeFactor,
@@ -195,7 +269,16 @@ export function softForgetEligible(row, usage, correctsOwners, nowIso, ctx = {},
         return { eligible: false, reason: "not-active" };
     }
     if (row.soft_forgotten_at) {
-        return { eligible: false, reason: "already-soft-forgotten" };
+        // v3 re-evaluation: a soft-forgotten row may deserve restoration if its
+        // v2 multi-dimensional score has risen back above the threshold (e.g.
+        // it was soft-forgotten by an earlier single-dimension pass, or it was
+        // re-used since). This is the recovery path that keeps "soft forget"
+        // from becoming a one-way door.
+        const diag = scoreMemory(row, usage, nowIso, ctx, params);
+        if (diag.score >= cfg.SOFT_FORGET_SCORE) {
+            return { eligible: false, reason: "restore", shouldRestore: true, diagnostics: diag };
+        }
+        return { eligible: false, reason: "already-soft-forgotten", diagnostics: diag };
     }
     if (isProtected(row, correctsOwners)) {
         return { eligible: false, reason: "protected" };
@@ -351,6 +434,7 @@ export function scanForgetting(repo, workspaceId, nowIso, params = {}) {
 
     const softForgetCandidates = [];
     const archiveCandidates = [];
+    const restoreCandidates = [];
     const scanned = [];
     let activeCount = rows.length;
 
@@ -377,6 +461,11 @@ export function scanForgetting(repo, workspaceId, nowIso, params = {}) {
         });
 
         if (row.soft_forgotten_at) {
+            // v3 re-evaluation: if the v2 score rose above threshold, propose restore.
+            if (eligible.shouldRestore) {
+                restoreCandidates.push({ id: row.id, title: row.title, reason: "score-recovered", score: eligible.diagnostics?.score ?? null });
+                continue;
+            }
             // Second stage: already demoted, check archive eligibility.
             const arch = archiveEligible(row, nowIso, params);
             if (arch.eligible && activeCount > cfg.MIN_ACTIVE) {
@@ -390,7 +479,7 @@ export function scanForgetting(repo, workspaceId, nowIso, params = {}) {
         }
     }
 
-    return { softForgetCandidates, archiveCandidates, scanned };
+    return { softForgetCandidates, archiveCandidates, restoreCandidates, scanned };
 }
 
 /**

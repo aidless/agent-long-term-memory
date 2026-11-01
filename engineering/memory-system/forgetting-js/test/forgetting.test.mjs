@@ -3,11 +3,11 @@
  * Tests the pure scoring/eligibility/propagation functions with a minimal
  * repository mock — no plugin data layer, no SQLite.
  */
-import {
+import { scoreBreakdown, scoreBand,
     scoreMemory, softForgetEligible, archiveEligible, isProtected,
     scanForgetting, overflowBackfill, propagationRisk,
     FORGETTING_DEFAULTS,
-} from '../src/forgetting/forgetting.js';
+} from '../src/forgetting.js';
 
 let pass = 0, fail = 0;
 function ok(cond, name, detail = '') {
@@ -117,8 +117,10 @@ console.log('\n== V6 scanForgetting ==');
         listWorkspaces: () => [{ workspace_id: '/ws', updated_at: nowIso }],
     };
     const scan = scanForgetting(mockRepo, '/ws', nowIso, { activeTopics: ['gpu', 'compute'] });
-    ok(scan.softForgetCandidates.length === 1, 'scan finds only o1', `got ${scan.softForgetCandidates.length}`);
-    ok(scan.softForgetCandidates[0]?.id === 'o1', 'o1 is the candidate', scan.softForgetCandidates[0]?.id);
+    // REFERENCE_RELEVANCE=0.7 now correctly marks same-topic redundant references
+    // as forgettable (their scores drop below 0.15). o1 is the long-unused one.
+    ok(scan.softForgetCandidates.some((c) => c.id === 'o1'), 'o1 is among the candidates', scan.softForgetCandidates.map((c) => c.id).join(','));
+    ok(scan.softForgetCandidates.length >= 13, 'redundant same-topic fillers also candidates', `got ${scan.softForgetCandidates.length}`);
 }
 
 // ---- V7: overflowBackfill ----
@@ -138,5 +140,75 @@ console.log('\n== V7 overflowBackfill ==');
     ok(res.proposals.every(p => !p.id.startsWith('u1')), 'user never proposed');
 }
 
-console.log(`\n==== ${pass} PASS / ${fail} FAIL ====`);
+console.log(`\n==== V1-V7: ${pass} PASS / ${fail} FAIL ====`);
+// ---- V8: restore path (v3) ----
+console.log('\n== V8 restore ==');
+{
+    // A soft-forgotten row whose v2 score is above threshold should be restorable.
+    const forgot = row({ id: 'restore-me', title: 'Fresh important ref', soft_forgotten_at: '2026-10-30T00:00:00Z' });
+    const elig = softForgetEligible(forgot, usage(2, '2026-10-30T00:00:00Z'), 0, nowIso, { activeTopics: [] });
+    ok(!elig.eligible, 'restore not eligible', elig.reason);
+    ok(elig.shouldRestore === true, 'shouldRestore=true', String(elig.shouldRestore));
+    ok(elig.reason === 'restore', 'reason restore', elig.reason);
+
+    // A genuinely low-value soft-forgotten row stays archived-eligible.
+    const stillOld = row({ id: 'old-forgot', title: 'Old unrelated', soft_forgotten_at: '2026-10-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z' });
+    const elig2 = softForgetEligible(stillOld, usage(0, '2026-05-01T00:00:00Z'), 0, nowIso, { activeTopics: [] });
+    ok(!elig2.shouldRestore, 'low-score stays not-restorable', String(elig2.shouldRestore));
+
+    // scanForgetting should surface restoreCandidates.
+    const rows = [
+        row({ id: 'restore-me', title: 'Fresh important ref', soft_forgotten_at: '2026-10-30T00:00:00Z' }),
+        row({ id: 'old-forgot', title: 'Old unrelated', soft_forgotten_at: '2026-10-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z' }),
+    ];
+    const mockRepo = {
+        listRows: () => rows,
+        getUsage: (ws, [id]) => id === 'restore-me' ? dbUsage(2, '2026-10-30T00:00:00Z') : dbUsage(0, '2026-05-01T00:00:00Z'),
+        listWorkspaces: () => [{ workspace_id: '/ws', updated_at: nowIso }],
+    };
+    const scan = scanForgetting(mockRepo, '/ws', nowIso, { activeTopics: [] });
+    ok(scan.restoreCandidates.length === 1, 'scan finds restore candidate', `got ${scan.restoreCandidates.length}`);
+    ok(scan.restoreCandidates[0]?.id === 'restore-me', 'restore candidate is restore-me', scan.restoreCandidates[0]?.id);
+    ok(scan.restoreCandidates[0]?.reason === 'score-recovered', 'restore reason score-recovered', scan.restoreCandidates[0]?.reason);
+    ok(scan.archiveCandidates.length === 0, 'no archive candidate (restore takes precedence)', `got ${scan.archiveCandidates.length}`);
+}
+
+// ---- V9: scoreBreakdown / scoreBand (v3) ----
+console.log('\n== V9 breakdown & band ==');
+{
+    const bd = scoreBreakdown(row(), usage(3, '2026-10-30T00:00:00Z'), nowIso, { activeTopics: [] });
+    ok(bd.score > 0.4, 'breakdown score > 0.4', `got ${bd.score.toFixed(3)}`);
+    ok(bd.dominant === 'time' || bd.dominant === 'usage', 'dominant is time or usage', bd.dominant);
+    ok(bd.components.length === 5, '5 components', `got ${bd.components.length}`);
+    ok(bd.components.every((c) => c.name && typeof c.contribution === 'number'), 'each component has name+contribution');
+    const sum = bd.components.reduce((a, c) => a + c.contribution, 0);
+    ok(Math.abs(sum - bd.score) < 1e-9, 'contributions sum to score', `sum ${sum.toFixed(4)} vs ${bd.score.toFixed(4)}`);
+
+    ok(scoreBand(0.05).band === 'forget-candidate', '0.05 is forget-candidate', scoreBand(0.05).band);
+    ok(scoreBand(0.15).band === 'soft-zone', '0.15 is soft-zone', scoreBand(0.15).band);
+    ok(scoreBand(0.35).band === 'soft-zone', '0.35 is soft-zone', scoreBand(0.35).band);
+    ok(scoreBand(0.8).band === 'retained', '0.8 is retained', scoreBand(0.8).band);
+    ok(scoreBand(0.15).pctAboveSoftForget === 0, 'threshold is 0% above', String(scoreBand(0.15).pctAboveSoftForget));
+}
+
+// ---- V10: threshold sensitivity & false-positive guard (v3) ----
+console.log('\n== V10 sensitivity ==');
+{
+    // A memory that is recent + used must NEVER be a forget candidate at any
+    // reasonable threshold. Guards against false positives on fresh content.
+    const fresh = softForgetEligible(row({ title: 'Current GPU project' }), usage(3, '2026-10-30T00:00:00Z'), 0, nowIso, { activeTopics: ['gpu'] });
+    ok(!fresh.eligible, 'fresh+used+topic never forget', fresh.reason);
+
+    // The v1 false-positive scenario: reference, age 1.1d, zero use.
+    // Under v2 it must score ABOVE threshold (0.15) because it is recent.
+    const oneDay = scoreMemory(row({ title: 'Brand new ref' }), usage(0, '2026-10-30T00:00:00Z'), nowIso, { activeTopics: [] });
+    ok(oneDay.score > 0.15, '1-day-old zero-use ref scores above 0.15', `got ${oneDay.score.toFixed(3)}`);
+
+    // Older + zero use: below threshold only when genuinely old.
+    const old = scoreMemory(row({ title: 'Aged unused ref' }), usage(0, '2025-05-01T00:00:00Z'), nowIso, { activeTopics: [] });
+    ok(old.score < 0.15, '6-month unused ref below threshold', `got ${old.score.toFixed(3)}`);
+}
+
+
+console.log(`\n==== TOTAL: ${pass} PASS / ${fail} FAIL ====`);
 process.exit(fail > 0 ? 1 : 0);
