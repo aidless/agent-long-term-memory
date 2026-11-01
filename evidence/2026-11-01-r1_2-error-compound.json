@@ -1,0 +1,128 @@
+{
+  "experiment": "R1.2 错误复合模型（公平对照版）",
+  "description": "分离「独立失败」vs「复合失败」，用相同完成判据公平对照，验证错误复合比 p^k 更坏",
+  "method": "两种模式用相同完成判据「错误数 ≤ theta」。independent：错误独立无传播（Binomial）。compound：错误传播（p_eff=p-contamination*errors，正反馈），错误计数过度分散。比较两种模式 P(错误数≤theta)。θ=0 应相同=p^k（验证公平）；θ≥1 复合应更低（传播使级联）。",
+  "main_comparison_theta1": {
+    "p_step": 0.98,
+    "contamination": 0.05,
+    "theta": 1,
+    "results": [
+      {
+        "steps": 10,
+        "theta": 1,
+        "independent_rate": 0.9838,
+        "compound_rate": 0.9506,
+        "theoretical_pk": 0.8170728068875467,
+        "compound_penalty": 0.03320000000000001,
+        "independent_dispersion": 0.9728166088249877,
+        "compound_dispersion": 1.492456895193065,
+        "n_trials": 10000
+      },
+      {
+        "steps": 20,
+        "theta": 1,
+        "independent_rate": 0.9421,
+        "compound_rate": 0.842,
+        "theoretical_pk": 0.6676079717550942,
+        "compound_penalty": 0.10010000000000008,
+        "independent_dispersion": 0.9920093632958801,
+        "compound_dispersion": 2.429425428784489,
+        "n_trials": 10000
+      },
+      {
+        "steps": 50,
+        "theta": 1,
+        "independent_rate": 0.7426,
+        "compound_rate": 0.5003,
+        "theoretical_pk": 0.36416968008711675,
+        "compound_penalty": 0.24230000000000007,
+        "independent_dispersion": 0.9833097418901275,
+        "compound_dispersion": 9.000721190624551,
+        "n_trials": 10000
+      }
+    ]
+  },
+  "fairness_control_theta0": {
+    "p_step": 0.98,
+    "contamination": 0.05,
+    "theta": 0,
+    "results": [
+      {
+        "steps": 10,
+        "theta": 0,
+        "independent_rate": 0.8152,
+        "compound_rate": 0.8152,
+        "theoretical_pk": 0.8170728068875467,
+        "compound_penalty": 0.0,
+        "independent_dispersion": 0.9728166088249877,
+        "compound_dispersion": 1.492456895193065,
+        "n_trials": 10000
+      },
+      {
+        "steps": 20,
+        "theta": 0,
+        "independent_rate": 0.6672,
+        "compound_rate": 0.6672,
+        "theoretical_pk": 0.6676079717550942,
+        "compound_penalty": 0.0,
+        "independent_dispersion": 0.9920093632958801,
+        "compound_dispersion": 2.429425428784489,
+        "n_trials": 10000
+      },
+      {
+        "steps": 50,
+        "theta": 0,
+        "independent_rate": 0.363,
+        "compound_rate": 0.363,
+        "theoretical_pk": 0.36416968008711675,
+        "compound_penalty": 0.0,
+        "independent_dispersion": 0.9833097418901275,
+        "compound_dispersion": 9.000721190624551,
+        "n_trials": 10000
+      }
+    ]
+  },
+  "sensitivity": {
+    "k": 50,
+    "p_step": 0.98,
+    "sensitivity": [
+      {
+        "contamination": 0.01,
+        "independent_rate": 0.7426,
+        "compound_rate": 0.6602,
+        "compound_penalty": 0.08240000000000003,
+        "compound_dispersion": 1.604284829721362
+      },
+      {
+        "contamination": 0.02,
+        "independent_rate": 0.7426,
+        "compound_rate": 0.6021,
+        "compound_penalty": 0.14050000000000007,
+        "compound_dispersion": 2.5788210142369694
+      },
+      {
+        "contamination": 0.05,
+        "independent_rate": 0.7426,
+        "compound_rate": 0.5003,
+        "compound_penalty": 0.24230000000000007,
+        "compound_dispersion": 9.000721190624551
+      },
+      {
+        "contamination": 0.1,
+        "independent_rate": 0.7426,
+        "compound_rate": 0.4393,
+        "compound_penalty": 0.3033,
+        "compound_dispersion": 15.629261054849849
+      },
+      {
+        "contamination": 0.2,
+        "independent_rate": 0.7426,
+        "compound_rate": 0.3998,
+        "compound_penalty": 0.34280000000000005,
+        "compound_dispersion": 16.917622122028945
+      }
+    ]
+  },
+  "conclusion": "若 θ=0 时独立=复合=p^k（公平性验证通过），且 θ≥1 时 compound_rate < independent_rate，则验证：错误复合比简单连乘更坏（错误传播导致错误级联，过度分散）。",
+  "reproduce": "python3 research/01-long-horizon-autonomy/experiments/r1_2_error_compound.py"
+}
