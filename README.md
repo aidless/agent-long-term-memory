@@ -66,13 +66,47 @@ agent-long-term-memory/
 └── refs/                   # 参考文献 + 引用库
 ```
 
+## 研究进度
+
+> 截至 2026-11-01，三大判断的实验验证与工程补全已完成（19 个本地提交，94 测试通过）。
+
+### 判断①：长程自主性（`research/01-long-horizon-autonomy/`）
+
+| 实验 | 结论 | 证据 |
+|---|---|---|
+| R1.1 可靠性曲线 | p^k 指数衰减验证，R²=0.999976（0.98 单步，50 步剩 0.365） | `evidence/2026-11-01-r1_1-reliability-curve.json` |
+| R1.2 错误复合 | 错误复合比 p^k 更坏：k=50 惩罚 -0.2423，错误分散 9.0 vs 0.98 | `evidence/2026-11-01-r1_2-error-compound.json` |
+| R1.3 记忆支撑 | 记忆帮助长程（上下文不足时 +0.375）但也可能损害（上下文足够时 -0.625） | `evidence/2026-11-01-r1_3-memory-benefit.json` |
+| 工程强化 | 冲突检测+关联遗忘补全（94 测试通过） | `manager/conflict.py` + `manager/associated_forgetter.py` |
+
+### 判断②：记忆 vs 检索（`research/02-memory-vs-retrieval/`）
+
+| 实验 | 结论 | 证据 |
+|---|---|---|
+| R2.1 检索vs记忆 | 模糊查询：纯检索 0.000 / 记忆 1.000（+1.000）；记忆对噪音鲁棒 | `evidence/2026-11-01-r2_1-retrieval-vs-memory.json` |
+| R2.2 记忆基准 | 判据 M=P(成功\|模糊,记忆)-P(成功\|模糊,检索)：M=1.000（真记忆） | `evidence/2026-11-01-r2_2-memory-benchmark.json` |
+| R2.3 架构分类 | 分层×遗忘×整合设计空间；缺口=冲突检测/关联遗忘 | `research/02-memory-vs-retrieval/design-space.md` |
+
+### 判断③：递归自我改进（`research/03-recursive-self-improve/`）
+
+| 实验 | 结论 | 证据 |
+|---|---|---|
+| R3.1 边界梳理 | AlphaEvolve≠通用递归；外循环=有限递归；权重级未实现 | `boundary-classification.md` |
+| R3.2 自指性 | agent 用自身记忆改进：+0.237（超外部注入 +0.144） | `evidence/2026-11-01-r3_2-self-reference.json` |
+| R3.3 能力/分数分离 | evaluator capture 门禁：分数+0.345 但 held-out+0.01（p=0.918）→ 假改进 | `evidence/2026-11-01-r3_3-capability-score.json` |
+
 ## 快速开始（工程轨基线）
 
 ```bash
 cd engineering/memory-system
 pip install -r requirements.txt
-pytest tests/ -q          # 跑记忆系统测试
+pytest tests/ -q          # 跑记忆系统测试（94 passed）
 ```
+
+## 工程强化（R2.3 缺口补全）
+
+- **冲突检测**（`manager/conflict.py`）：检测矛盾记忆（同一主题+反义表述），解决冲突保留重要性高者。呼应文献[4] MOSAIC 局限——静默矛盾积累。
+- **关联遗忘**（`manager/associated_forgetter.py`）：遗忘触发关联处置（低重要性级联遗忘 / 高重要性断联保留）。
 
 ## forgetting-js（选择性遗忘 JS 实现）
 
