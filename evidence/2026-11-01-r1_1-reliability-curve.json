@@ -1,0 +1,64 @@
+{
+  "experiment": "R1.1 可靠性曲线实测",
+  "description": "验证判断①「长程自主性失败率连乘指数衰减」",
+  "method": "模拟 agent 执行 k 步任务，每步独立失败率 p_step（任何错误即失败）。对 k=10/20/50/100 各做 10000 次模拟，测完成率 vs 理论 p^k。",
+  "p_step_base": 0.98,
+  "experiment1_independent_failure": {
+    "p_step": 0.98,
+    "steps_list": [
+      10,
+      20,
+      50,
+      100
+    ],
+    "n_trials": 10000,
+    "error_contamination": 0.0,
+    "results": [
+      {
+        "steps": 10,
+        "measured_rate": 0.815,
+        "theoretical_rate": 0.8170728068875467,
+        "n_trials": 10000,
+        "abs_error": 0.002072806887546741
+      },
+      {
+        "steps": 20,
+        "measured_rate": 0.6724,
+        "theoretical_rate": 0.6676079717550942,
+        "n_trials": 10000,
+        "abs_error": 0.004792028244905766
+      },
+      {
+        "steps": 50,
+        "measured_rate": 0.3653,
+        "theoretical_rate": 0.36416968008711675,
+        "n_trials": 10000,
+        "abs_error": 0.0011303199128832597
+      },
+      {
+        "steps": 100,
+        "measured_rate": 0.1346,
+        "theoretical_rate": 0.13261955589475294,
+        "n_trials": 10000,
+        "abs_error": 0.001980444105247059
+      }
+    ],
+    "fit_r_squared": 0.9999756514119044
+  },
+  "experiment2_different_p": {
+    "0.95": {
+      "measured": 0.0779,
+      "theoretical": 0.07694497527671315
+    },
+    "0.98": {
+      "measured": 0.3653,
+      "theoretical": 0.36416968008711675
+    },
+    "0.99": {
+      "measured": 0.5986,
+      "theoretical": 0.6050060671375364
+    }
+  },
+  "conclusion": "独立失败模式完成率遵循 p^k 指数衰减（拟合 R²=0.999976，k=10/20/50/100 实测与理论 |Δ|<0.005）。这验证了判断①：长程自主性完成率随步数指数衰减。错误复合对照留给 R1.2。",
+  "reproduce": "python3 research/01-long-horizon-autonomy/experiments/r1_1_reliability_curve.py"
+}
