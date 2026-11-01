@@ -1,0 +1,39 @@
+{
+  "scenario_A_no_overfit": {
+    "experiment": "R3.3 能力/分数分离（evaluator capture 门禁）",
+    "description": "分离「真实能力提升」与「评测器钻空」",
+    "n_pairs": 200,
+    "results": {
+      "score_baseline": 0.48,
+      "score_improved": 0.73,
+      "score_gain": 0.25,
+      "score_mcnemar_p": 9.701730804528465e-07,
+      "heldout_baseline": 0.49,
+      "heldout_improved": 0.685,
+      "heldout_gain": 0.19500000000000006,
+      "heldout_mcnemar_p": 6.467045262218053e-05
+    },
+    "verdict": "CAPABILITY_IMPROVEMENT",
+    "explanation": "分数涨 AND held-out 涨：真实能力提升——改进在独立 held-out 上迁移，非 evaluator capture。",
+    "eval_overfit": 0.0
+  },
+  "scenario_B_overfit": {
+    "experiment": "R3.3 能力/分数分离（evaluator capture 门禁）",
+    "description": "分离「真实能力提升」与「评测器钻空」",
+    "n_pairs": 200,
+    "results": {
+      "score_baseline": 0.48,
+      "score_improved": 0.825,
+      "score_gain": 0.345,
+      "score_mcnemar_p": 8.481335709263927e-12,
+      "heldout_baseline": 0.49,
+      "heldout_improved": 0.5,
+      "heldout_gain": 0.010000000000000009,
+      "heldout_mcnemar_p": 0.9179230673157427
+    },
+    "verdict": "EVALUATOR_CAPTURE",
+    "explanation": "分数涨但 held-out 没涨：evaluator capture（假改进）——分数涨≠能力涨，改进只钻了评测集空子。",
+    "eval_overfit": 0.3
+  },
+  "gate": "任何自我改进主张必须验证「分数涨 AND held-out 涨」——用 McNemar 配对检验确认增益显著，且增益在独立 held-out 上迁移。"
+}
