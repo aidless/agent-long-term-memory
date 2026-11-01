@@ -1,0 +1,18 @@
+{
+  "protocol": "R2.2 记忆基准协议",
+  "description": "区分「记忆能力」与「检索质量」的可操作判据",
+  "criterion": "M = P(成功|模糊查询,记忆系统) - P(成功|模糊查询,纯检索)",
+  "n_trials": 1000,
+  "results": {
+    "exact_query_pure": 1.0,
+    "fuzzy_query_pure": 0.0,
+    "exact_query_memory": 1.0,
+    "fuzzy_query_memory": 1.0
+  },
+  "memory_advantage": {
+    "fuzzy_query_M": 1.0,
+    "exact_query_M": 0.0
+  },
+  "verdict": "MEMORY_SYSTEM",
+  "explanation": "M(模糊查询)>0：记忆系统在模糊查询时仍能帮助（关联记忆），是真正的记忆系统（自主，不依赖查询精确度）。"
+}
