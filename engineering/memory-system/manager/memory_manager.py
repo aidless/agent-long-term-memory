@@ -14,6 +14,8 @@ from memory.working import WorkingMemory
 from manager.extractor import MemoryExtractor, MockLLMExtractor
 from manager.consolidator import MockLLMConsolidator
 from manager.forgetter import MemoryForgetter, ForgetConfig
+from manager.conflict import ConflictDetector, ConflictConfig
+from manager.associated_forgetter import AssociatedForgetter, AssociationConfig
 from retrieval.hybrid import HybridRetriever, HybridConfig
 from retrieval.semantic_search import SearchResult
 
@@ -58,6 +60,10 @@ class MemoryManager:
 
         # 遗忘器
         self.forgetter = MemoryForgetter(config=forget_config)
+
+        # 冲突检测器和关联遗忘器（R2.3 缺口补全）
+        self.conflict_detector = ConflictDetector()
+        self.associated_forgetter = AssociatedForgetter()
 
         # 记忆引用追踪
         self._reference_tracker: dict[str, list[str]] = {}
@@ -250,6 +256,114 @@ class MemoryManager:
                 consolidated.append(item)
 
         return consolidated
+
+    # ==================== 冲突检测（R2.3 缺口补全） ====================
+
+    def detect_conflicts(self, memory_type: str = "semantic") -> list[tuple]:
+        """
+        检测指定类型记忆中的冲突。
+
+        Args:
+            memory_type: 记忆类型（默认 semantic）
+
+        Returns:
+            冲突记忆对列表
+        """
+        memory_store = self._get_memory_store(memory_type)
+        if not memory_store:
+            return []
+        memories = memory_store.list_all()
+        return self.conflict_detector.find_conflicts(memories)
+
+    def resolve_conflicts(self, memory_type: str = "semantic") -> list[dict]:
+        """
+        解决指定类型记忆中的冲突（保留重要性更高者）。
+
+        Args:
+            memory_type: 记忆类型（默认 semantic）
+
+        Returns:
+            冲突解决记录列表
+        """
+        memory_store = self._get_memory_store(memory_type)
+        if not memory_store:
+            return []
+        memories = memory_store.list_all()
+        conflicts = self.conflict_detector.find_conflicts(memories)
+        resolved = []
+        for m1, m2 in conflicts:
+            keep = self.conflict_detector.resolve_conflict(m1, m2)
+            discard = m2 if keep.id == m1.id else m1
+            memory_store.delete(discard.id)
+            resolved.append({
+                "keep_id": keep.id,
+                "discard_id": discard.id,
+                "keep_content": keep.content,
+                "discard_content": discard.content,
+            })
+        return resolved
+
+    # ==================== 关联遗忘（R2.3 缺口补全） ====================
+
+    def forget_with_associates(
+        self,
+        memory_type: str,
+        memory_id: str,
+        associates: list[str],
+    ) -> dict:
+        """
+        遗忘一条记忆并处理其关联记忆。
+
+        策略：
+        - 关联记忆重要性 ≥ 阈值：断联保留（重要性降低）
+        - 关联记忆重要性 < 阈值：级联遗忘（一起删除）
+
+        Args:
+            memory_type: 记忆类型
+            memory_id: 被遗忘的记忆 ID
+            associates: 关联记忆 ID 列表
+
+        Returns:
+            处置结果（cascade_ids / disconnected_ids）
+        """
+        memory_store = self._get_memory_store(memory_type)
+        if not memory_store:
+            return {"cascade_ids": [], "disconnected_ids": []}
+
+        # 获取被遗忘记忆
+        forgotten = memory_store.get(memory_id)
+        if not forgotten:
+            return {"cascade_ids": [], "disconnected_ids": []}
+
+        # 获取关联记忆
+        assoc_items = []
+        for aid in associates:
+            item = memory_store.get(aid)
+            if item:
+                assoc_items.append(item)
+
+        # 处理关联
+        cascade, disconnected = self.associated_forgetter.forget_with_associates(
+            forgotten, assoc_items
+        )
+
+        # 执行：删除被遗忘 + 级联，更新断联
+        memory_store.delete(memory_id)
+        cascade_ids = []
+        for c in cascade:
+            memory_store.delete(c.id)
+            cascade_ids.append(c.id)
+
+        disconnected_ids = []
+        for d in disconnected:
+            memory_store.update(d.id, importance=d.importance)
+            disconnected_ids.append(d.id)
+
+        return {
+            "forgotten_id": memory_id,
+            "cascade_ids": cascade_ids,
+            "disconnected_ids": disconnected_ids,
+        }
 
     # ==================== 遗忘操作 ====================
 
