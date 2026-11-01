@@ -59,6 +59,8 @@ agent-long-term-memory/
 │   └── 03-recursive-self-improve/
 ├── engineering/            # 工程轨
 │   └── memory-system/      # 长期记忆系统（18-agent 原型升级基线）
+│       ├── manager/        # Python 记忆管理（forgetter.py 等）
+│       └── forgetting-js/  # 选择性遗忘 JS 实现（独立 npm 模块，25 单测）
 ├── evidence/               # 证据与可复现数据
 ├── docs/design/            # 设计文档
 └── refs/                   # 参考文献 + 引用库
@@ -71,6 +73,17 @@ cd engineering/memory-system
 pip install -r requirements.txt
 pytest tests/ -q          # 跑记忆系统测试
 ```
+
+## forgetting-js（选择性遗忘 JS 实现）
+
+```bash
+cd engineering/memory-system/forgetting-js
+npm install
+npm test          # 25 断言全过
+```
+
+多维度评分（时间/使用/冗余/复用/漂移）+ 两段式遗忘（软遗忘→归档）+ 四判据 + 保护规则。
+与 `manager/forgetter.py`（Python）并列，两者覆盖不同运行时栈。
 
 ## 复现与验证
 
