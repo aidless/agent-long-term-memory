@@ -108,6 +108,7 @@ pytest tests/ -q          # 跑记忆系统测试（94 passed）
 
 - **冲突检测**（`manager/conflict.py`）：检测矛盾记忆（同一主题+反义表述），解决冲突保留重要性高者。呼应文献[4] MOSAIC 局限——静默矛盾积累。
 - **关联遗忘**（`manager/associated_forgetter.py`）：遗忘触发关联处置（低重要性级联遗忘 / 高重要性断联保留）。
+- **冲突场景验证**（`research/02-memory-vs-retrieval/experiments/r2_conflict_integration.py`）：真实矛盾记忆（中文/英文反义对）端到端验证 detect → mark → resolve → keep-higher-importance，无冲突场景 0 误伤。测试：110 passed。
 
 ## forgetting-js（选择性遗忘 JS 实现）
 
