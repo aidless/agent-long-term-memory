@@ -38,6 +38,42 @@ OPPOSITE_PAIRS = [
     ("支持", "反对"), ("通过", "拒绝"), ("positive", "negative"),
     ("good", "bad"), ("high", "low"), ("success", "failure"),
     ("effective", "ineffective"), ("correct", "wrong"),
+    # 补充中文反义对（性能/表现相关）
+    ("提升", "下降"), ("提升", "降低"), ("上升", "下降"), ("上升", "降低"),
+    ("增长", "减少"), ("增长", "缩减"), ("改善", "恶化"), ("改善", "变差"),
+    ("增强", "减弱"), ("提高", "降低"), ("提高", "下降"),
+    ("更好", "更差"), ("更快", "更慢"), ("更稳", "更不稳定"), ("更稳", "不稳定"),
+    ("优秀", "糟糕"), ("优秀", "拙劣"), ("先进", "落后"),
+    ("可靠", "不可靠"), ("稳定", "不稳定"), ("有效", "失效"),
+    ("活跃", "不活跃"), ("可用", "不可用"), ("存在", "缺失"),
+    ("包含", "排除"), ("接受", "拒绝"), ("通过", "未通过"),
+    ("成功", "不成功"), ("正确", "不正确"), ("一致", "不一致"),
+    # 英文动词/形容词反义对（补充：improved/degraded 等）
+    ("improved", "degraded"), ("improved", "worsened"),
+    ("increased", "decreased"), ("increase", "decrease"),
+    ("better", "worse"), ("improve", "degrade"), ("improve", "worsen"),
+    ("succeeded", "failed"), ("succeed", "fail"),
+    ("faster", "slower"), ("stronger", "weaker"),
+    ("more", "less"), ("up", "down"),
+    ("reliable", "unreliable"), ("stable", "unstable"),
+    ("beneficial", "harmful"), ("gain", "loss"), ("gain", "lose"),
+    ("advantage", "disadvantage"), ("support", "oppose"),
+    ("approve", "reject"), ("accepted", "rejected"),
+    ("win", "lose"), ("works", "fails"),
+    ("true", "false"), ("yes", "no"),
+    ("well", "poorly"), ("good", "poor"), ("good", "badly"),
+    ("fast", "slow"), ("fast", "slowly"), ("early", "late"),
+    ("strong", "weak"), ("strong", "weakly"), ("large", "small"),
+    ("large", "small"), ("many", "few"), ("much", "little"),
+    ("increase", "reduce"), ("increase", "decrease"),
+    ("improve", "reduce"), ("improve", "decline"),
+    ("rise", "fall"), ("rise", "drop"), ("grow", "shrink"),
+    ("upgrade", "downgrade"), ("expand", "contract"),
+    ("enable", "disable"), ("enable", "disenable"),
+    ("active", "inactive"), ("available", "unavailable"),
+    ("present", "absent"), ("include", "exclude"),
+    ("positive", "negative"), ("profit", "loss"),
+    ("advance", "retreat"), ("progress", "regress"),
 ]
 
 
@@ -49,6 +85,20 @@ GENERIC_WORDS = {
     "有效", "无效", "正确", "错误", "快", "慢", "优", "劣",
     "强", "弱", "增加", "减少", "支持", "反对", "通过", "拒绝",
     "是", "的", "和", "与", "在", "有", "为", "对",
+    # 英文通用词（补充：不构成主题区分的词）
+    "improved", "degraded", "worsened", "increased", "decreased",
+    "better", "worse", "improve", "degrade", "worsen",
+    "succeeded", "failed", "succeed", "fail",
+    "faster", "slower", "stronger", "weaker", "reliable", "unreliable",
+    "stable", "unstable", "beneficial", "harmful", "gain", "loss",
+    "significantly", "very", "quite", "slightly", "extremely",
+    "well", "poorly", "works", "fails", "true", "false",
+    "the", "an", "of", "to", "in", "on", "for", "with",
+    # 'a' 不在 GENERIC：单字母 'a' 常是变量/实体标识（模型 A、算法 a），
+    # 且英文不定冠词 'a' 作 subject 时通常伴随 'model'/'algorithm' 等
+    # 通用词已被排除，不会单独造成误判。
+    "and", "or", "but", "is", "are", "was", "were", "be", "been",
+    "it", "this", "that", "these", "those", "its", "their",
 }
 
 
@@ -132,11 +182,47 @@ class ConflictDetector:
         return tokens_a & tokens_b
 
     def _has_opposite(self, a: str, b: str) -> bool:
-        """检测两条记忆是否含反义表述。"""
+        """检测两条记忆是否含反义表述。
+
+        支持词形变化：'stability'/'instability' 通过词干 'stable'/'unstable'
+        匹配。用词干匹配而非精确子串——英文词形变化（-ity/-y/-ed/-ing）
+        导致精确子串失败。
+        """
         for pos, neg in OPPOSITE_PAIRS:
-            if pos in a and neg in b:
+            if self._stem_match(pos, a) and self._stem_match(neg, b):
                 return True
-            if neg in a and pos in b:
+            if self._stem_match(neg, a) and self._stem_match(pos, b):
+                return True
+        return False
+
+    def _stem_match(self, stem: str, text: str) -> bool:
+        """词干匹配：检查 text 中是否含 stem 或其词形变化。
+
+        处理英文词形变化（-ity/-ness/-ful/-ly/-ed/-ing/-ment 及 e 结尾变体、
+        un/in/im/ir 否定前缀）。例：'stable' 匹配 'stability'，'unstable'
+        匹配 'instability'。
+        """
+        if stem in text:
+            return True
+        # 否定前缀变体（unstable->stable 核心）
+        for prefix in ("un", "in", "im", "ir", "dis", "non"):
+            core = stem[len(prefix):] if stem.startswith(prefix) else stem
+            # 核心词干 + 词形变化后缀
+            core_base = core[:-1] if core.endswith("e") else core
+            for candidate in (core, core_base, core[:4] if len(core) >= 4 else core):
+                if candidate and candidate in text:
+                    return True
+            # 常见词形变化后缀
+            for suffix in ("ful", "ness", "ly", "ing", "ed", "ment", "ity"):
+                if (core + suffix) in text or (core_base + suffix) in text:
+                    return True
+        # 无否定前缀的常规词干 + 词形变化
+        core_base = stem[:-1] if stem.endswith("e") else stem
+        for candidate in (core_base, stem[:4] if len(stem) >= 4 else stem):
+            if candidate and candidate in text:
+                return True
+        for suffix in ("ful", "ness", "ly", "ing", "ed", "ment", "ity"):
+            if (stem + suffix) in text or (core_base + suffix) in text:
                 return True
         return False
 

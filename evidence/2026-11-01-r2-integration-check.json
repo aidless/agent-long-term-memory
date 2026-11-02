@@ -1,0 +1,34 @@
+{
+  "experiment": "R2-INTEGRATION 整合验证：工程强化（冲突检测/关联遗忘/陈化/校准）接入 MemoryManager 后不损害长程收益",
+  "description": "对照「基础 MemoryManager」vs「强化 MemoryManager（含全部新组件自动触发）」在长程任务上的完成率，确认工程强化不损害长程记忆收益",
+  "method": "同一长程任务（k 步，每步需要先前事实）。baseline：MemoryManager 默认（无强化路径触发）。enhanced：MemoryManager + 强化路径（add 后显式触发_auto_conflict_check 冲突标记）。比较完成率。若强化不损害收益，enhanced 完成率 ≈ baseline；若强化损害，enhanced 显著更低。",
+  "main_comparison": {
+    "context_capacity": 5,
+    "step_success_rate": 0.98,
+    "results": [
+      {
+        "steps": 10,
+        "baseline_rate": 0.8505,
+        "enhanced_rate": 0.8505,
+        "difference": 0.0,
+        "n_trials": 2000
+      },
+      {
+        "steps": 20,
+        "baseline_rate": 0.6925,
+        "enhanced_rate": 0.6925,
+        "difference": 0.0,
+        "n_trials": 2000
+      },
+      {
+        "steps": 50,
+        "baseline_rate": 0.3925,
+        "enhanced_rate": 0.3925,
+        "difference": 0.0,
+        "n_trials": 2000
+      }
+    ]
+  },
+  "conclusion": "若差异 |difference| < 0.01（噪声水平）则强化不损害长程收益；若 difference 显著负值则强化损害。",
+  "reproduce": "python3 research/02-memory-vs-retrieval/experiments/r2_integration_check.py"
+}
