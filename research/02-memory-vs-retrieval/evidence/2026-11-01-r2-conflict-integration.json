@@ -1,0 +1,39 @@
+{
+  "scenario1_detect": {
+    "total": 2,
+    "conflict_candidates": [
+      {
+        "content": "model_a 性能提升显著",
+        "importance": 0.9,
+        "conflict_candidate": false
+      },
+      {
+        "content": "model_a 性能下降明显",
+        "importance": 0.4,
+        "conflict_candidate": true
+      }
+    ]
+  },
+  "scenario1_resolve": {
+    "resolved_count": 1,
+    "keep_content": "model_a 性能提升显著",
+    "discard_content": "model_a 性能下降明显",
+    "remaining_after": [
+      "model_a 性能提升显著"
+    ]
+  },
+  "scenario2_english": {
+    "resolved_count": 1,
+    "keep_content": "algo_b performance improved",
+    "discard_content": "algo_b performance degraded"
+  },
+  "scenario3_reverse_importance": {
+    "resolved_count": 1,
+    "keep_content": "model_c 稳定性减弱",
+    "keep_importance_should_be_high": true
+  },
+  "scenario4_no_conflict": {
+    "resolved_count": 0,
+    "expected_0": true
+  }
+}
