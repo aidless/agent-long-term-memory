@@ -27,6 +27,9 @@ v3 修复：`softForgetEligible` 检测到 soft_forgotten 但 v2 score ≥ 阈�
 ### 真实库验证
 
 真实库（44 active）：9 条 v1 误杀 reference 全部被 v3 识别为 restore 候选并恢复；
+插件 `patrol.js` 集成：v3 的 `restoreCandidates` 此前未被插件 patrol 应用（只应用
+`softForgetCandidates`），已补齐——patrol 现在调用 `memories.restoreSoftForgetRow`
+恢复 score 回升的记忆，输出 `appliedRestore`。
 v3 语义下 0 候选（真实库干净）。
 
 ---
