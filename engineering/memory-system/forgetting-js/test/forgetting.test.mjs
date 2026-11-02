@@ -267,5 +267,70 @@ console.log('\n== V11 unarchive ==');
 }
 
 
+// ---- V12: adversarial robustness (v4) ----
+console.log('\n== V12 adversarial ==');
+{
+    const now = '2026-11-01T00:00:00Z';
+    const ctx = { activeTopics: [] };
+    const base = { id: 'x', title: 'test', type: 'reference', status: 'active' };
+    const cases = [
+        ['null usage', base, null],
+        ['empty usage', base, {}],
+        ['NaN use', base, { useCount: NaN, lastUsedAt: now }],
+        ['negative use', base, { useCount: -5, lastUsedAt: now }],
+        ['huge use', base, { useCount: 1e9, lastUsedAt: now }],
+        ['malformed date', base, { useCount: 1, lastUsedAt: 'not-a-date' }],
+        ['future date', base, { useCount: 0, lastUsedAt: '2099-01-01T00:00:00Z' }],
+        ['empty title', { ...base, title: '' }, { useCount: 0, lastUsedAt: now }],
+        ['undefined params', base, { useCount: 0, lastUsedAt: now }, undefined],
+    ];
+    for (const [name, row, usage, params] of cases) {
+        let s;
+        try {
+            s = scoreMemory(row, usage, now, ctx, params);
+        } catch (e) {
+            fail++; console.log(`  FAIL ${name}: threw ${e.message}`); continue;
+        }
+        if (Number.isFinite(s.score) && s.score >= 0 && s.score <= 1) {
+            pass++;
+        } else {
+            fail++; console.log(`  FAIL ${name}: score=${s.score}`);
+        }
+    }
+    // Extreme weight vectors must not produce NaN / out-of-range scores.
+    const wCases = [
+        ['all zero weights', { W_TIME: 0, W_USAGE: 0, W_REDUNDANCY: 0, W_REUSE: 0, W_DRIFT: 0 }],
+        ['all one weights', { W_TIME: 1, W_USAGE: 1, W_REDUNDANCY: 1, W_REUSE: 1, W_DRIFT: 1 }],
+        ['time only', { W_TIME: 1, W_USAGE: 0, W_REDUNDANCY: 0, W_REUSE: 0, W_DRIFT: 0 }],
+    ];
+    for (const [name, p] of wCases) {
+        const s = scoreMemory(base, { useCount: 0, lastUsedAt: now }, now, ctx, p);
+        if (Number.isFinite(s.score) && s.score >= 0 && s.score <= 1) {
+            pass++;
+        } else {
+            fail++; console.log(`  FAIL ${name}: score=${s.score}`);
+        }
+    }
+    // unarchiveEligible with NaN / null usage must not throw or misjudge.
+    const uCases = [
+        [{ ...base, status: 'archived' }, null],
+        [{ ...base, status: 'archived' }, { useCount: NaN, lastUsedAt: now }],
+    ];
+    for (const [row, usage] of uCases) {
+        let u;
+        try {
+            u = unarchiveEligible(row, usage, now, {});
+        } catch (e) {
+            fail++; console.log(`  FAIL unarchive threw: ${e.message}`); continue;
+        }
+        if (typeof u.eligible === 'boolean') {
+            pass++;
+        } else {
+            fail++; console.log(`  FAIL unarchive eligible=${u.eligible}`);
+        }
+    }
+}
+
+
 console.log(`\n==== TOTAL: ${pass} PASS / ${fail} FAIL ====`);
 process.exit(fail > 0 ? 1 : 0);

@@ -185,7 +185,10 @@ export function scoreBand(score, params = {}) {
 
 export function scoreMemory(row, usage, nowIso, ctx = {}, params = {}) {
     const cfg = { ...FORGETTING_DEFAULTS, ...params };
-    const useCount = usage?.useCount ?? 0;
+    // Adversarial robustness: a non-finite useCount (NaN/Infinity) must not
+    // poison the score. Treat it as zero (unknown usage) rather than NaN.
+    const rawUseCount = usage?.useCount ?? 0;
+    const useCount = Number.isFinite(rawUseCount) ? Math.max(0, rawUseCount) : 0;
     const lastUsedAt = usage?.lastUsedAt ?? row.updated_at;
     const days = daysSince(lastUsedAt, nowIso);
 
@@ -346,7 +349,8 @@ export function unarchiveEligible(row, usage, nowIso, params = {}) {
         return { eligible: false, reason: "merged-superseded", score: null };
     }
     // Re-used since archiving: always worth restoring.
-    const useCount = usage?.useCount ?? 0;
+    const rawUseCount = usage?.useCount ?? 0;
+    const useCount = Number.isFinite(rawUseCount) ? Math.max(0, rawUseCount) : 0;
     if (useCount > 0) {
         return { eligible: true, reason: "reused-since-archive", score: null };
     }
