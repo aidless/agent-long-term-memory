@@ -219,3 +219,5 @@ shrink       = useCount / (useCount + EVIDENCE_HALF)
 可行性边界（诚实声明）：dsh 有正信号（`use_count`，按 id 读取时触发）但无负信号
 （检索失败不记录），所以 Memory Worth 的「成功/失败比值」**不可落地**；本 v5 只落地
 「证据量」部分，不伪造失败信号。测试 82 PASS。
+
+完整 v5 交付报告见 [docs/v5-evidence-shrink-report.md](docs/v5-evidence-shrink-report.md)。
