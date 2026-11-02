@@ -16,6 +16,12 @@ from manager.consolidator import MockLLMConsolidator
 from manager.forgetter import MemoryForgetter, ForgetConfig
 from manager.conflict import ConflictDetector, ConflictConfig
 from manager.associated_forgetter import AssociatedForgetter, AssociationConfig
+from manager.calibration import (
+    ProceduralStalenessDetector,
+    ImportanceCalibrator,
+    StalenessConfig,
+    CalibrationConfig,
+)
 from retrieval.hybrid import HybridRetriever, HybridConfig
 from retrieval.semantic_search import SearchResult
 
@@ -64,6 +70,10 @@ class MemoryManager:
         # 冲突检测器和关联遗忘器（R2.3 缺口补全）
         self.conflict_detector = ConflictDetector()
         self.associated_forgetter = AssociatedForgetter()
+
+        # 程序记忆陈化检测 + 重要性校准（R2.3 剩余缺口补全）
+        self.staleness_detector = ProceduralStalenessDetector()
+        self.importance_calibrator = ImportanceCalibrator()
 
         # 记忆引用追踪
         self._reference_tracker: dict[str, list[str]] = {}
@@ -432,6 +442,64 @@ class MemoryManager:
         self._reference_tracker.clear()
 
     # ==================== 内部方法 ====================
+
+    def detect_stale_procedural(self) -> list[MemoryItem]:
+        """
+        检测陈化的程序记忆（技能失效）。
+
+        陈化 ≠ 变旧：陈化是技能随环境变化而失效（失败过多/长期未用且低重要性/
+        近期失败级联），非纯时间衰减。供上层决定降级或淘汰。
+
+        Returns:
+            陈化的程序记忆列表
+        """
+        items = self.procedural.list_all()
+        return self.staleness_detector.find_stale(items)
+
+    def calibrate_importance(self, memory_type: str, memory_id: str) -> Optional[float]:
+        """
+        校准单条记忆的重要性（从使用反馈动态校准）。
+
+        校准后的重要性直接用于遗忘器的保留分数计算，实现「重要性 ↔ 遗忘」联动。
+        校准结果写回记忆的 importance 字段。
+
+        Args:
+            memory_type: 记忆类型（semantic/episodic/procedural）
+            memory_id: 记忆 id
+
+        Returns:
+            校准后的重要性，或 None（记忆不存在）
+        """
+        memory_store = self._get_memory_store(memory_type)
+        if not memory_store:
+            return None
+        item = memory_store.get(memory_id)
+        if not item:
+            return None
+        calibrated = self.importance_calibrator.calibrate(item)
+        # 写回校准后的重要性
+        memory_store.update(memory_id, importance=calibrated)
+        return calibrated
+
+    def calibrate_all_importance(self, memory_type: str) -> dict[str, float]:
+        """
+        校准某类型全部记忆的重要性。
+
+        Args:
+            memory_type: 记忆类型
+
+        Returns:
+            {memory_id: calibrated_importance}
+        """
+        memory_store = self._get_memory_store(memory_type)
+        if not memory_store:
+            return {}
+        results = {}
+        for item in memory_store.list_all():
+            cal = self.importance_calibrator.calibrate(item)
+            memory_store.update(item.id, importance=cal)
+            results[item.id] = cal
+        return results
 
     def _get_memory_store(self, memory_type: str):
         """根据类型获取记忆存储。"""

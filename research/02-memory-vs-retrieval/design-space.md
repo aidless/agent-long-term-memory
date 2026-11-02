@@ -69,8 +69,8 @@
 
 1. **关联遗忘**：遗忘一条记忆时，关联记忆的处置未定义。R2.1 显示关联是记忆系统的核心优势，但关联的**生命周期**（何时断联、何时一起遗忘）是缺口。→ **已补全**（2026-11-01）：`engineering/memory-system/manager/associated_forgetter.py`（级联遗忘/断联保留）。
 2. **冲突检测**：现有系统静默积累矛盾（文献[4] 局限）。需要检测矛盾记忆并标记/解决，防止噪音污染。→ **已补全**（2026-11-01）：`engineering/memory-system/manager/conflict.py`（同一主题标识+反义表述检测，保留重要性高者）。
-3. **程序记忆陈化检测**：技能随环境变化陈化，需要「技能失效」机制而非纯时间衰减。→ 未补全（设计空间保留）。
-4. **重要性校准**：重要性评分（`alpha·manual+beta·access_freq+gamma·recency`）的主观性——需要与遗忘策略联动校准。→ 未补全（设计空间保留）。
+3. **程序记忆陈化检测**：技能随环境变化陈化，需要「技能失效」机制而非纯时间衰减。→ **已补全**（2026-11-01）：`engineering/memory-system/manager/calibration.py`（ProceduralStalenessDetector：失败过多/长期未用低重要性/近期失败级联 → 陈化）。
+4. **重要性校准**：重要性评分（`alpha·manual+beta·access_freq+gamma·recency`）的主观性——需要与遗忘策略联动校准。→ **已补全**（2026-11-01）：`engineering/memory-system/manager/calibration.py`（ImportanceCalibrator：手动基础+访问频率+近期使用-失败惩罚-陈化惩罚，校准后写回并联动遗忘器）。
 
 ## 6. 关联实验
 
