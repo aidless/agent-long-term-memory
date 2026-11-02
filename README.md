@@ -86,6 +86,7 @@ agent-long-term-memory/
 | R2.1 检索vs记忆 | 模糊查询：纯检索 0.000 / 记忆 1.000（+1.000）；记忆对噪音鲁棒 | `evidence/2026-11-01-r2_1-retrieval-vs-memory.json` |
 | R2.2 记忆基准 | 判据 M=P(成功\|模糊,记忆)-P(成功\|模糊,检索)：M=1.000（真记忆） | `evidence/2026-11-01-r2_2-memory-benchmark.json` |
 | R2.3 架构分类 | 分层×遗忘×整合设计空间；缺口=冲突检测/关联遗忘 | `research/02-memory-vs-retrieval/design-space.md` |
+| R2-E2E 端到端长程 | 真实 MemoryManager 系统支撑长程：k=20 无记忆 0.000/有记忆 0.6925（+0.6925）；上下文足够（C=20）时记忆不再帮助（-0.0145） | `evidence/2026-11-01-r2_e2e-long-horizon.json` |
 
 ### 判断③：递归自我改进（`research/03-recursive-self-improve/`）
 
