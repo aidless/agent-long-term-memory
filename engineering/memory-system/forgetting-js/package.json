@@ -1,7 +1,7 @@
 {
   "name": "selective-forgetting",
-  "version": "1.1.0",
-  "description": "Selective forgetting for agent memory stores: soft-forget + archive, multi-dimensional scoring, budget-aware overflow backfill, restore path for score-recovered memories.",
+  "version": "1.2.0",
+  "description": "Selective forgetting for agent memory stores: soft-forget + archive, multi-dimensional scoring (time/usage/redundancy/reuse/drift), budget-aware overflow backfill, restore + un-archive paths, adversarial-safe scoring.",
   "type": "module",
   "main": "src/forgetting/forgetting.js",
   "exports": {

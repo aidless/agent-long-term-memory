@@ -194,3 +194,7 @@ npm test   # 56 assertions, pure-function + minimal-repo-mock
 ## License
 
 MIT. See [LICENSE](./LICENSE).
+
+## v4 增强报告
+
+完整 v4 迭代（插件集成/权重校准/归档再评估/对抗鲁棒/npm 准备）见 [docs/v4-enhancement-report.md](docs/v4-enhancement-report.md)。
