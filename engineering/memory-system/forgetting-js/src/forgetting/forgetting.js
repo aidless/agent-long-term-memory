@@ -70,6 +70,8 @@ export const FORGETTING_DEFAULTS = {
     REUSE_BOOST: 1.0,
     /** Topic match bonus for memories whose keywords hit active project topics. */
     TOPIC_MATCH_BONUS: 1.0,
+    /** Score above which an archived memory is worth un-archiving (re-evaluated). */
+    UNARCHIVE_SCORE: 0.5,
 };
 
 /**
@@ -315,6 +317,78 @@ export function archiveEligible(row, nowIso, params = {}) {
         return { eligible: true, reason: "forgotten-long-enough", daysSinceForget: days };
     }
     return { eligible: false, reason: "still-recent", daysSinceForget: days };
+}
+
+/**
+ * Whether an archived memory should be un-archived (brought back to active).
+ * An archived row is history — it was forgotten for a long time and moved out
+ * of the injection list. It returns only when it has earned its way back:
+ *   1. Its v2 score rose above UNARCHIVE_SCORE (re-retrieved / re-used), or
+ *   2. It was explicitly re-used since archiving (use_count > 0).
+ * The score is computed the same way as an active row so the two paths agree.
+ * @param row - An archived memories row (status = 'archived').
+ * @param usage - `{ useCount, lastUsedAt }` or null.
+ * @param nowIso - Reference instant.
+ * @param params - Overrides.
+ * @returns `{ eligible, reason, score }`.
+ */
+export function unarchiveEligible(row, usage, nowIso, params = {}) {
+    const cfg = { ...FORGETTING_DEFAULTS, ...params };
+    if (row.status !== "archived") {
+        return { eligible: false, reason: "not-archived", score: null };
+    }
+    // A row merged into a newer version (merged_into set) is a superseded
+    // duplicate: it must never come back — the replacement is the canonical
+    // copy, and restoring the old one would create two active rows for the
+    // same fact. Only genuinely-dead archived rows (no merge target) are
+    // eligible for re-evaluation.
+    if (row.merged_into) {
+        return { eligible: false, reason: "merged-superseded", score: null };
+    }
+    // Re-used since archiving: always worth restoring.
+    const useCount = usage?.useCount ?? 0;
+    if (useCount > 0) {
+        return { eligible: true, reason: "reused-since-archive", score: null };
+    }
+    // Score re-evaluation: compute fresh and compare against the threshold.
+    const d = scoreMemory(row, usage, nowIso, {}, params);
+    if (d.score >= cfg.UNARCHIVE_SCORE) {
+        return { eligible: true, reason: "score-recovered", score: d.score };
+    }
+    return { eligible: false, reason: "score-low", score: d.score };
+}
+
+/**
+ * Scan archived rows of one partition and propose un-archiving those that have
+ * earned their way back. Pure — the caller decides whether to apply.
+ * @param repo - The memories repository (needs listArchivedRows + getUsage).
+ * @param workspaceId - The partition.
+ * @param nowIso - Reference instant.
+ * @param params - Overrides.
+ * @returns `{ unarchiveCandidates, scanned }`.
+ */
+export function scanUnarchive(repo, workspaceId, nowIso, params = {}) {
+    const rows = repo.listArchivedRows ? repo.listArchivedRows(workspaceId) : [];
+    const unarchiveCandidates = [];
+    const scanned = [];
+    for (const row of rows) {
+        const usage = repo.getUsage ? repo.getUsage(workspaceId, [row.id]) : null;
+        const u = usage ? { useCount: usage.use_count, lastUsedAt: usage.last_used_at } : null;
+        const verdict = unarchiveEligible(row, u, nowIso, params);
+        scanned.push({
+            id: row.id,
+            title: row.title,
+            type: row.type,
+            useCount: u?.useCount ?? 0,
+            eligible: verdict.eligible,
+            reason: verdict.reason,
+            score: verdict.score,
+        });
+        if (verdict.eligible) {
+            unarchiveCandidates.push({ id: row.id, title: row.title, reason: verdict.reason, score: verdict.score });
+        }
+    }
+    return { unarchiveCandidates, scanned };
 }
 
 /**

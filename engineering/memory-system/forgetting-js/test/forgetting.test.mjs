@@ -6,6 +6,7 @@
 import { scoreBreakdown, scoreBand,
     scoreMemory, softForgetEligible, archiveEligible, isProtected,
     scanForgetting, overflowBackfill, propagationRisk,
+    unarchiveEligible, scanUnarchive,
     FORGETTING_DEFAULTS,
 } from '../src/forgetting.js';
 
@@ -207,6 +208,62 @@ console.log('\n== V10 sensitivity ==');
     // Older + zero use: below threshold only when genuinely old.
     const old = scoreMemory(row({ title: 'Aged unused ref' }), usage(0, '2025-05-01T00:00:00Z'), nowIso, { activeTopics: [] });
     ok(old.score < 0.15, '6-month unused ref below threshold', `got ${old.score.toFixed(3)}`);
+}
+
+
+// ---- V11: un-archive re-evaluation (v4) ----
+console.log('\n== V11 unarchive ==');
+{
+    // An archived row re-used since archiving must be restored.
+    const reused = unarchiveEligible(
+        { id: 'arch-reused', type: 'reference', title: 'Old but reused', status: 'archived' },
+        { useCount: 2, lastUsedAt: '2026-10-30T00:00:00Z' },
+        nowIso, {}
+    );
+    ok(reused.eligible === true, 'archived+reused is un-archive eligible', reused.reason);
+    ok(reused.reason === 'reused-since-archive', 'reused reason is reused-since-archive', reused.reason);
+
+    // An archived row with high score (recovered) must be restored.
+    const high = unarchiveEligible(
+        { id: 'arch-high', type: 'user', title: 'High value recent', status: 'archived', updated_at: '2026-10-30T00:00:00Z' },
+        { useCount: 0, lastUsedAt: null },
+        nowIso, {}
+    );
+    ok(high.eligible === true, 'archived+high-score is un-archive eligible', high.reason);
+
+    // A truly dead archived row stays archived.
+    const dead = unarchiveEligible(
+        { id: 'arch-dead', type: 'reference', title: 'Dead old ref', status: 'archived', updated_at: '2025-05-01T00:00:00Z' },
+        { useCount: 0, lastUsedAt: null },
+        nowIso, {}
+    );
+    ok(dead.eligible === false, 'archived+dead stays archived', dead.reason);
+    ok(dead.reason === 'score-low', 'dead reason is score-low', dead.reason);
+
+    // A merged duplicate (superseded by a newer version) NEVER comes back,
+    // even with a high score — the replacement is canonical.
+    const merged = unarchiveEligible(
+        { id: 'arch-merged', type: 'user', title: 'Old version', status: 'archived', updated_at: '2026-10-30T00:00:00Z', merged_into: 'new-version' },
+        { useCount: 0, lastUsedAt: null },
+        nowIso, {}
+    );
+    ok(merged.eligible === false, 'merged duplicate never un-archives', merged.reason);
+    ok(merged.reason === 'merged-superseded', 'merged reason is merged-superseded', merged.reason);
+
+    // scanUnarchive end-to-end with a mock repo.
+    const repo = {
+        listArchivedRows: () => [
+            { id: 'a1', type: 'reference', title: 'Reused archived', status: 'archived', updated_at: '2026-10-30T00:00:00Z' },
+            { id: 'a2', type: 'reference', title: 'Dead archived', status: 'archived', updated_at: '2025-05-01T00:00:00Z' },
+        ],
+        getUsage: (ws, [id]) => id === 'a1'
+            ? { use_count: 1, last_used_at: '2026-10-30T00:00:00Z' }
+            : { use_count: 0, last_used_at: null },
+    };
+    const scan = scanUnarchive(repo, '/ws', nowIso, {});
+    ok(scan.unarchiveCandidates.length === 1, 'scanUnarchive finds exactly 1', String(scan.unarchiveCandidates.length));
+    ok(scan.unarchiveCandidates[0].id === 'a1', 'unarchive candidate is a1', scan.unarchiveCandidates[0]?.id);
+    ok(scan.scanned.length === 2, 'scanUnarchive scans 2 rows', String(scan.scanned.length));
 }
 
 

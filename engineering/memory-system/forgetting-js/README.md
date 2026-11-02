@@ -30,6 +30,17 @@ v3 修复：`softForgetEligible` 检测到 soft_forgotten 但 v2 score ≥ 阈�
 插件 `patrol.js` 集成：v3 的 `restoreCandidates` 此前未被插件 patrol 应用（只应用
 `softForgetCandidates`），已补齐——patrol 现在调用 `memories.restoreSoftForgetRow`
 恢复 score 回升的记忆，输出 `appliedRestore`。
+
+### v4: 归档再评估（un-archive）路径
+
+archived 记忆此前永不恢复（`archiveEligible` 单向）。v4 新增 `unarchiveEligible` +
+`scanUnarchive`：
+- **复用触发**：archived 且 `use_count > 0` → 恢复（`reused-since-archive`）。
+- **评分回升**：archived 且 score ≥ `UNARCHIVE_SCORE`（0.5）→ 恢复（`score-recovered`）。
+- **合并副本永不恢复**：`merged_into` 非空的行是被新版替代的副本，即使高分也
+  `merged-superseded`——避免旧版和新版同时 active 破坏合并语义。
+- 插件 `patrol.js` 同步应用：`memories.unarchiveRow`（status→active，清 archive_reason/
+  merged_into），输出 `appliedUnarchive`。真实库 19 条 archived 全为合并副本 → 0 候选。
 v3 语义下 0 候选（真实库干净）。
 
 ---
