@@ -1,0 +1,35 @@
+{
+  "experiment": "R2.3 长程任务变体（V2.2）",
+  "description": "更长程（k=100）、干扰记忆（每步污染）、混合上下文（50% 上下文/50% 检索）三变体对照",
+  "method": "复用 E2ELongHorizonAgent 逻辑，扩展三变体。每个变体对照无记忆 vs 有记忆（真实 MemoryManager）。",
+  "variants": [
+    {
+      "mode": "baseline",
+      "steps": 100,
+      "context_capacity": 5,
+      "no_memory_rate": 0.0,
+      "with_memory_rate": 0.146,
+      "memory_benefit": 0.146,
+      "n_trials": 2000
+    },
+    {
+      "mode": "distractor",
+      "steps": 20,
+      "context_capacity": 5,
+      "no_memory_rate": 0.0,
+      "with_memory_rate": 0.6925,
+      "memory_benefit": 0.6925,
+      "n_trials": 2000
+    },
+    {
+      "mode": "mixed_context",
+      "steps": 20,
+      "context_capacity": 10,
+      "no_memory_rate": 0.016,
+      "with_memory_rate": 0.6925,
+      "memory_benefit": 0.6765,
+      "n_trials": 2000
+    }
+  ],
+  "reproduce": "python3 research/02-memory-vs-retrieval/experiments/r2_long_horizon_variants.py"
+}

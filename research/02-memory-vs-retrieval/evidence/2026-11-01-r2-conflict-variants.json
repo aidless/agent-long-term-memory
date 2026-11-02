@@ -1,0 +1,36 @@
+{
+  "V2_1a_multi_conflict": {
+    "total_stored": 3,
+    "conflict_candidates": 2,
+    "resolved_count": 2,
+    "keep_content": "model_a 性能提升",
+    "remaining_count": 2,
+    "remaining_contents": [
+      "model_a 性能提升",
+      "model_a 性能提升显著"
+    ],
+    "no_residual_conflict": true
+  },
+  "V2_1b_cascade_conflict": {
+    "initial_stored": 3,
+    "resolved_count": 2,
+    "keep_content": "model_b 稳定性减弱",
+    "remaining_count": 2,
+    "remaining_contents": [
+      "model_b 稳定性减弱",
+      "model_b 稳定性显著减弱"
+    ],
+    "no_residual_conflict": true
+  },
+  "V2_1c_importance_close": {
+    "resolved_count": 1,
+    "keep_content": "model_c 效率提高",
+    "keep_importance": null,
+    "keep_should_be_051": true
+  },
+  "V2_1d_no_conflict_multi": {
+    "total_stored": 3,
+    "resolved_count": 0,
+    "expected_0": true
+  }
+}
