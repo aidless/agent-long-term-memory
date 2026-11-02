@@ -372,7 +372,7 @@ export function unarchiveEligible(row, usage, nowIso, params = {}) {
  * @returns `{ unarchiveCandidates, scanned }`.
  */
 export function scanUnarchive(repo, workspaceId, nowIso, params = {}) {
-    const rows = repo.listArchivedRows ? repo.listArchivedRows(workspaceId) : [];
+    const rows = repo.listArchivedRows ? repo.listArchivedRows(workspaceId, 500) : [];
     const unarchiveCandidates = [];
     const scanned = [];
     for (const row of rows) {
