@@ -109,8 +109,8 @@ console.log('\n== V5 propagationRisk ==');
 console.log('\n== V6 scanForgetting ==');
 {
     const rows = [];
-    for (let i = 0; i < 13; i++) rows.push(row({ id: 'f'+i, title: 'Filler topic '+i, updated_at: '2026-10-15T00:00:00Z' }));
-    rows.push(row({ id: 'o1', title: 'Old unrelated ref', updated_at: '2026-10-01T00:00:00Z' }));
+    for (let i = 0; i < 13; i++) rows.push(row({ id: 'f'+i, title: 'Filler topic '+i, updated_at: '2026-07-01T00:00:00Z' }));
+    rows.push(row({ id: 'o1', title: 'Old unrelated ref', updated_at: '2025-01-01T00:00:00Z' }));
     const mockRepo = {
         listRows: () => rows,
         getUsage: (ws, [id]) => id === 'o1' ? dbUsage(0, '2025-05-01T00:00:00Z') : undefined,

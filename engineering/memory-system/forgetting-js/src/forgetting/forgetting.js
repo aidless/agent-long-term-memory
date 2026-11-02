@@ -55,13 +55,13 @@ export const FORGETTING_DEFAULTS = {
 
     // === v2 multi-dimensional weights (sum to 1.0) ===
     /** Weight of temporal decay (long unused). */
-    W_TIME: 0.35,
+    W_TIME: 0.45,
     /** Weight of usage frequency. */
     W_USAGE: 0.25,
     /** Weight of content redundancy (same-topic cluster). */
     W_REDUNDANCY: 0.15,
     /** Weight of cross-project reuse value. */
-    W_REUSE: 0.15,
+    W_REUSE: 0.05,
     /** Weight of topic drift vs. active projects. */
     W_DRIFT: 0.10,
     /** How many same-topic siblings make a memory redundant. */
