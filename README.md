@@ -68,7 +68,7 @@ agent-long-term-memory/
 
 ## 研究进度
 
-> 截至 2026-11-01，三大判断的实验验证与工程补全已完成（19 个本地提交，94 测试通过）。
+> 截至 2026-11-01，三大判断的实验验证与工程补全已完成（21 个本地提交，110 测试通过）。
 
 ### 判断①：长程自主性（`research/01-long-horizon-autonomy/`）
 
@@ -87,6 +87,8 @@ agent-long-term-memory/
 | R2.2 记忆基准 | 判据 M=P(成功\|模糊,记忆)-P(成功\|模糊,检索)：M=1.000（真记忆） | `evidence/2026-11-01-r2_2-memory-benchmark.json` |
 | R2.3 架构分类 | 分层×遗忘×整合设计空间；缺口=冲突检测/关联遗忘 | `research/02-memory-vs-retrieval/design-space.md` |
 | R2-E2E 端到端长程 | 真实 MemoryManager 系统支撑长程：k=20 无记忆 0.000/有记忆 0.6925（+0.6925）；上下文足够（C=20）时记忆不再帮助（-0.0145） | `evidence/2026-11-01-r2_e2e-long-horizon.json` |
+| R2-INTEGRATION 整合验证 | 强化路径不损害无冲突场景：k=10/20/50 基础 vs 强化差异全 0（0.8505/0.6925/0.3925） | `evidence/2026-11-01-r2-integration-check.json` |
+| R2-CONFLICT 冲突场景 | 真实矛盾记忆端到端：detect→mark→resolve→保留高重要性；无冲突 0 误伤 | `evidence/2026-11-01-r2-conflict-integration.json` |
 
 ### 判断③：递归自我改进（`research/03-recursive-self-improve/`）
 
@@ -109,6 +111,26 @@ pytest tests/ -q          # 跑记忆系统测试（94 passed）
 - **冲突检测**（`manager/conflict.py`）：检测矛盾记忆（同一主题+反义表述），解决冲突保留重要性高者。呼应文献[4] MOSAIC 局限——静默矛盾积累。
 - **关联遗忘**（`manager/associated_forgetter.py`）：遗忘触发关联处置（低重要性级联遗忘 / 高重要性断联保留）。
 - **冲突场景验证**（`research/02-memory-vs-retrieval/experiments/r2_conflict_integration.py`）：真实矛盾记忆（中文/英文反义对）端到端验证 detect → mark → resolve → keep-higher-importance，无冲突场景 0 误伤。测试：110 passed。
+
+## 阶段报告（2026-11-01）
+
+### 阶段一：研究框架 + 证据池（已完成）
+
+**三大判断全部完成实验验证与工程补全：**
+
+| 判断 | 核心结论 | 关键证据 |
+|------|---------|---------|
+| ①长程自主性 | p^k 指数衰减（R²=0.999976）；错误复合比连乘更坏（k=50 惩罚 -0.2423）；记忆在上下文不足时帮助（+0.375）但足够时损害（-0.625） | R1.1/R1.2/R1.3 |
+| ②记忆 vs 检索 | 检索≠记忆（M=1.000 真记忆）；真实系统支撑长程（+0.6925）；冲突检测/关联遗忘补全 | R2.1/R2.2/R2-E2E/R2-INTEGRATION/R2-CONFLICT |
+| ③递归自我改进 | AlphaEvolve≠通用递归；自指增益 +0.237 超外部注入；evaluator capture 门禁（分数+0.345 但 held-out+0.01） | R3.1/R3.2/R3.3 |
+
+**工程强化已接入主流程**：`add_*` 自动冲突检查、`consolidate_memories` 整合后冲突检查、`forget` 触发关联遗忘、`calibration.py`（陈化检测+校准）。测试 110 passed（无回归）。
+
+### 阶段二：实验设计 + 预注册（下一步）
+
+- 各方向实验设计细化（冲突场景、长程任务变体、检索 vs 记忆对照）。
+- 预注册链：P6 长期记忆预注册 + PAPER5 证据链复用。
+- 工程轨：forgetting-js v6 survival potential（并行会话进行中）。
 
 ## forgetting-js（选择性遗忘 JS 实现）
 
