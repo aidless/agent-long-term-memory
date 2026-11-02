@@ -229,3 +229,52 @@ class TestConsolidator:
         ]
         groups = consolidator.find_consolidatable(memories, similarity_threshold=0.2, min_group_size=3)
         assert len(groups) >= 1
+
+    def test_tier_probabilistic_enforce_capacity(self):
+        """v8: tier 概率淘汰——低分者概率高（非一次清空）。"""
+        import random
+        rng = random.Random(42)
+        # 低分记忆（tier 1: rate 0.65）vs 高分记忆（tier 4: rate 0.0）
+        low_memories = [
+            MemoryItem(id=f"low_{i}", content=f"低分记忆{i}", memory_type="semantic",
+                       created_at=time.time() - 86400*120, importance=0.01)
+            for i in range(20)
+        ]
+        high_memories = [
+            MemoryItem(id=f"high_{i}", content=f"高分记忆{i}", memory_type="semantic",
+                       created_at=time.time(), importance=1.0)
+            for i in range(20)
+        ]
+        # 容量 10，超出 30 条（40 条记忆，淘汰 30 个候选）
+        cfg = ForgetConfig(max_capacity=10, tier_probabilistic=True, tier_seed=42)
+        forgetter = MemoryForgetter(config=cfg)
+        all_memories = high_memories + low_memories
+        to_forget = forgetter.enforce_capacity(all_memories)
+        # 高分（tier 4, rate 0.0）绝不应被淘汰
+        assert not any(mid.startswith("high_") for mid in to_forget), "高分记忆不应被淘汰"
+        # 低分（tier 1, rate 0.65）应有部分被淘汰（概率准入，非全部）
+        low_forgotten = [mid for mid in to_forget if mid.startswith("low_")]
+        assert len(low_forgotten) > 0, "低分记忆应有部分被淘汰"
+        assert len(low_forgotten) < 30, "不应一次清空全部低分（概率准入）"
+        # 概率准入：约 65% 低分被淘汰（20×0.65≈13）
+        assert 5 <= len(low_forgotten) <= 18, f"低分淘汰数应接近 13，实际 {len(low_forgotten)}"
+
+    def test_tier_deterministic_capacity(self):
+        """v8 对照：tier_probabilistic=False 时确定性淘汰（默认行为不变）。"""
+        # 低分记忆（确定性淘汰：全部最低分被淘汰）
+        low_memories = [
+            MemoryItem(id=f"low_{i}", content=f"低分记忆{i}", memory_type="semantic",
+                       created_at=time.time() - 86400*120, importance=0.01)
+            for i in range(20)
+        ]
+        high_memories = [
+            MemoryItem(id=f"high_{i}", content=f"高分记忆{i}", memory_type="semantic",
+                       created_at=time.time(), importance=1.0)
+            for i in range(20)
+        ]
+        cfg = ForgetConfig(max_capacity=10)  # tier_probabilistic 默认 False
+        forgetter = MemoryForgetter(config=cfg)
+        all_memories = high_memories + low_memories
+        to_forget = forgetter.enforce_capacity(all_memories)
+        # 确定性：淘汰 30 个最低分（全部低分 20 + 10 个高分）
+        assert len(to_forget) == 30, f"确定性应淘汰 30 个，实际 {len(to_forget)}"

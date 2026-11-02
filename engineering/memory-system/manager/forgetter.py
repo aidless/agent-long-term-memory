@@ -18,6 +18,9 @@ class ForgetConfig:
     forget_threshold: float = 0.05  # 低于此阈值的记忆被遗忘
     importance_boost: float = 0.3  # 重要性对遗忘的缓冲系数
     access_boost: float = 0.1  # 访问频率对遗忘的缓冲系数
+    # v8: tier 概率遗忘（从 forgetting-js v7 direction ② 移植）
+    tier_probabilistic: bool = False  # 开启后按 tier forgetRate 概率准入（非一次全部淘汰）
+    tier_seed: Optional[int] = None   # 随机种子（None = 系统随机，测试用固定种子）
 
 
 class MemoryForgetter:
@@ -33,6 +36,9 @@ class MemoryForgetter:
 
     def __init__(self, config: Optional[ForgetConfig] = None):
         self.config = config or ForgetConfig()
+        # v8: tier 概率遗忘需要随机源（固定种子可复现）
+        import random
+        self._rng = random.Random(self.config.tier_seed) if self.config.tier_seed is not None else random.Random()
 
     def compute_retention_score(self, memory: MemoryItem, current_time: Optional[float] = None) -> float:
         """
@@ -101,6 +107,25 @@ class MemoryForgetter:
             if self.should_forget(m, current_time)
         ]
 
+    def tiered_forget_rate(self, score: float) -> tuple[int, float]:
+        """
+        按保留分数计算 tier 与 forgetRate（从 forgetting-js v7 direction ② 移植）。
+
+        语义：分数越低，tier 越低，forgetRate 越高（更可能被遗忘）。
+        - tier 4: score >= 0.8, rate=0.0（核心，永不遗忘）
+        - tier 3: score >= 0.55, rate=0.15（重要，低遗忘率）
+        - tier 2: score >= 0.3, rate=0.40（次要，中遗忘率）
+        - tier 1: score < 0.3, rate=0.65（不重要，高遗忘率）
+        """
+        if score >= 0.8:
+            return (4, 0.0)
+        elif score >= 0.55:
+            return (3, 0.15)
+        elif score >= 0.3:
+            return (2, 0.40)
+        else:
+            return (1, 0.65)
+
     def enforce_capacity(
         self,
         memories: list[MemoryItem],
@@ -110,6 +135,8 @@ class MemoryForgetter:
         执行容量限制。
 
         当记忆数量超过最大容量时，淘汰保留分数最低的记忆。
+        若 tier_probabilistic 开启，按 tier forgetRate 概率准入淘汰候选
+        （避免一次清空低分群体，与 v7 direction ② 语义一致）。
 
         Args:
             memories: 所有记忆
@@ -130,8 +157,19 @@ class MemoryForgetter:
 
         # 淘汰超出容量的部分
         excess = len(memories) - self.config.max_capacity
-        to_forget = [m.id for m, _ in scored[:excess]]
 
+        if self.config.tier_probabilistic:
+            # v8: tier 概率淘汰——每个候选按对应 tier 的 forgetRate 概率准入
+            # 避免一次清空低分群体（连续分数：0.55→~15%/pass，0.10→~65%/pass）
+            to_forget = []
+            for m, score in scored[:excess]:
+                _, rate = self.tiered_forget_rate(score)
+                if self._rng.random() < rate:
+                    to_forget.append(m.id)
+            return to_forget
+
+        # 确定性淘汰（默认）
+        to_forget = [m.id for m, _ in scored[:excess]]
         return to_forget
 
     def forget(
