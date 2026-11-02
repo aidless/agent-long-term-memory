@@ -1,0 +1,63 @@
+{
+  "experiment": "R2-E2E 端到端长程记忆对照（真实 MemoryManager 系统）",
+  "description": "对照「无记忆（仅上下文窗口）」vs「有记忆（真实 MemoryManager 存储/检索）」的长程任务完成率，验证工程轨记忆系统能否实际支撑长程任务",
+  "method": "长程任务=k 步，每步需要先前某一步建立的事实。no_memory：事实仅存在于上下文窗口（容量 C），超龄被逐出导致失败。with_memory：事实通过 MemoryManager.add_semantic() 存入，需要时 MemoryManager.search() 检索（真实检索逻辑，不注入人工参数）。每步单步成功率 p=0.98。比较两种完成率。",
+  "key_difference_from_r1_3": "R1.3 用抽象概率模型（memory_hit_rate/poison 参数）；本实验用真实 MemoryManager 的存储/检索逻辑，不注入人工检索参数——验证真实系统组件能否支撑长程任务。",
+  "main_comparison": {
+    "context_capacity": 5,
+    "step_success_rate": 0.98,
+    "results": [
+      {
+        "steps": 10,
+        "no_memory_rate": 0.1735,
+        "with_memory_rate": 0.8505,
+        "memory_benefit": 0.677,
+        "n_trials": 2000
+      },
+      {
+        "steps": 20,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.6925,
+        "memory_benefit": 0.6925,
+        "n_trials": 2000
+      },
+      {
+        "steps": 50,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.3925,
+        "memory_benefit": 0.3925,
+        "n_trials": 2000
+      }
+    ]
+  },
+  "capacity_sensitivity": {
+    "n_steps": 20,
+    "sensitivity": [
+      {
+        "context_capacity": 3,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.6925,
+        "memory_benefit": 0.6925
+      },
+      {
+        "context_capacity": 5,
+        "no_memory_rate": 0.0,
+        "with_memory_rate": 0.6925,
+        "memory_benefit": 0.6925
+      },
+      {
+        "context_capacity": 10,
+        "no_memory_rate": 0.016,
+        "with_memory_rate": 0.6925,
+        "memory_benefit": 0.6765
+      },
+      {
+        "context_capacity": 20,
+        "no_memory_rate": 0.707,
+        "with_memory_rate": 0.6925,
+        "memory_benefit": -0.014499999999999957
+      }
+    ]
+  },
+  "reproduce": "python3 research/02-memory-vs-retrieval/experiments/r2_e2e_long_horizon.py"
+}
