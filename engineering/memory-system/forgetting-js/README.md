@@ -270,3 +270,13 @@ W_REUSE=0.05 W_DRIFT=0.08  W_POTENTIAL=0.10
 V14（生存势能 10 断言）+ V15（层级遗忘 8 断言），全套 **99 PASS / 0 FAIL**。
 
 完整 v6 交付报告见 [docs/v6-enhancement-report.md](docs/v6-enhancement-report.md)。
+
+### v7：语义冗余 gating + 层级概率遗忘（1.5.0）
+
+- **Ψ_div 接线**：`diversityModulation` 从真实语义相似度计算（embedding 侧车
+  `all-MiniLM-L6-v2`），不再硬编码中性 1.0。相似记忆抑制、独立记忆奖励。
+- **层级概率遗忘**：`TIER_DRIVES_SOFT_FORGET`（默认 false）。开启后软遗忘候选
+  按 tier `forgetRate` 概率准入，避免单次清空 irrelevant tier。
+- V16 新增 4 断言，全套 **103 PASS / 0 FAIL**。
+
+完整 v7 交付报告见 [docs/v7-enhancement-report.md](docs/v7-enhancement-report.md)。
