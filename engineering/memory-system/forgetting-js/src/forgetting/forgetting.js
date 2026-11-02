@@ -55,15 +55,17 @@ export const FORGETTING_DEFAULTS = {
 
     // === v2 multi-dimensional weights (sum to 1.0) ===
     /** Weight of temporal decay (long unused). */
-    W_TIME: 0.45,
+    W_TIME: 0.40,
     /** Weight of usage frequency. */
-    W_USAGE: 0.25,
+    W_USAGE: 0.23,
     /** Weight of content redundancy (same-topic cluster). */
-    W_REDUNDANCY: 0.15,
+    W_REDUNDANCY: 0.14,
     /** Weight of cross-project reuse value. */
     W_REUSE: 0.05,
     /** Weight of topic drift vs. active projects. */
-    W_DRIFT: 0.10,
+    W_DRIFT: 0.08,
+    /** Weight of survival potential (v6, SF-AMS Eq.3). */
+    W_POTENTIAL: 0.10,
     /** How many same-topic siblings make a memory redundant. */
     REDUNDANCY_SATURATION: 3,
     /** A memory referenced by other workspaces/projects gets a reuse boost. */
@@ -74,6 +76,20 @@ export const FORGETTING_DEFAULTS = {
     UNARCHIVE_SCORE: 0.5,
     /** Use-count at which the evidence-weighted usage factor is half-shrunk. */
     EVIDENCE_HALF: 2,
+
+    // === v6 survival potential dynamics (SF-AMS Eq.3) ===
+    /** Global decay coefficient λ: how fast a memory's potential decays per patrol. */
+    POTENTIAL_DECAY: 0.02,
+    /** Weight of the survival-potential dimension in the composite score. */
+    W_POTENTIAL: 0.10,
+    /** Diversity modulation strength α_div in Ψ_div (SF-AMS Eq.4). */
+    DIVERSITY_ALPHA: 0.5,
+    /** Similarity threshold τ in Ψ_div: below it a memory is "novel" (boosted). */
+    DIVERSITY_TAU: 0.7,
+    /** Transition sharpness β in Ψ_div (higher = sharper gating). */
+    DIVERSITY_BETA: 5.0,
+    /** Floor for the survival potential (a long-unused memory never goes negative). */
+    POTENTIAL_FLOOR: 0,
 };
 
 /**
@@ -115,6 +131,8 @@ function daysSince(iso, nowIso) {
  *   - `sameTopicCount`: number of active siblings in the same topic cluster.
  *   - `crossWorkspaceRefs`: times this memory is referenced from other workspaces.
  *   - `activeTopics`: array of topic keywords for currently active projects.
+ *   - `potential`: the stored survival potential Φ(t) ∈ [0,1] (v6; optional).
+ *   - `similarity`: max semantic similarity to a sibling ∈ [0,1] (v6; optional).
  * @param params - Overrides for the defaults.
  * @returns The score in [0, 1], plus the dimension factors for diagnostics.
  */
@@ -138,6 +156,7 @@ export function scoreBreakdown(row, usage, nowIso, ctx = {}, params = {}) {
         { name: "redundancy", value: d.redundancyFactor, weight: (params.W_REDUNDANCY ?? FORGETTING_DEFAULTS.W_REDUNDANCY) },
         { name: "reuse", value: d.reuseFactor, weight: (params.W_REUSE ?? FORGETTING_DEFAULTS.W_REUSE) },
         { name: "drift", value: d.driftFactor, weight: (params.W_DRIFT ?? FORGETTING_DEFAULTS.W_DRIFT) },
+        { name: "potential", value: d.potentialFactor, weight: (params.W_POTENTIAL ?? FORGETTING_DEFAULTS.W_POTENTIAL) },
     ];
     const relevance = row.type === "reference"
         ? (params.REFERENCE_RELEVANCE ?? FORGETTING_DEFAULTS.REFERENCE_RELEVANCE)
@@ -218,12 +237,20 @@ export function scoreMemory(row, usage, nowIso, ctx = {}, params = {}) {
     const topicHits = activeTopics.some((t) => row.title.toLowerCase().includes(t.toLowerCase()) || row.description.toLowerCase().includes(t.toLowerCase()));
     const driftFactor = topicHits ? cfg.TOPIC_MATCH_BONUS : 0.2;
 
+    // Dimension 6: survival potential (v6, SF-AMS Eq.3). A stateful
+    // accumulator that carries memory-across-patrols; high when the memory
+    // has repeatedly proven useful, low when it has decayed. Optional — a
+    // caller without a stored potential (or on first run) gets the neutral
+    // value 0.5 so this dimension does not skew the composite.
+    const potential = Number.isFinite(ctx?.potential) ? Math.min(1, Math.max(0, ctx.potential)) : 0.5;
+
     const rawScore = Math.min(1,
         cfg.W_TIME * timeFactor
         + cfg.W_USAGE * usageFactor
         + cfg.W_REDUNDANCY * redundancyFactor
         + cfg.W_REUSE * reuseFactor
         + cfg.W_DRIFT * driftFactor
+        + cfg.W_POTENTIAL * potential
     );
     // Reference-type memories are lower-value than user/feedback (they are
     // external pointers, not identity/preferences). Apply a relevance floor
@@ -239,6 +266,7 @@ export function scoreMemory(row, usage, nowIso, ctx = {}, params = {}) {
         redundancyFactor,
         reuseFactor,
         driftFactor,
+        potentialFactor: potential,
         daysSinceLastUse: days,
         useCount,
         sameTopicCount: siblings,
@@ -246,6 +274,91 @@ export function scoreMemory(row, usage, nowIso, ctx = {}, params = {}) {
         topicDrift: !topicHits,
         matchedActiveTopic: topicHits,
     };
+}
+
+/**
+ * Survival potential dynamics (SF-AMS Eq.3): Φ(t+1) = max(0, Φ(t) + I·Γ_usage·Ψ_div − λ).
+ *
+ * This is the "make it bigger" upgrade: the composite score I(m) is the
+ * instantaneous importance (from `scoreMemory`), and the survival potential
+ * Φ is a *stateful* accumulator that carries memory-across-patrols. A memory
+ * that is repeatedly important and used keeps rising; one that drifts into
+ * irrelevance decays toward the floor. This turns a static scorer into a
+ * dynamic evolving memory system — the core conceptual difference between
+ * SF-AMS and a plain recompute-each-time heuristic.
+ *
+ * @param current - The current survival potential Φ(t) (from the stored field,
+ *   or 0 for a fresh memory).
+ * @param importance - The instantaneous importance I(m) ∈ [0,1] (usually the
+ *   `score` from `scoreMemory`).
+ * @param used - Whether the memory was accessed this cycle (Γ_usage ∈ {0,1}).
+ * @param diversity - The diversity modulation Ψ_div ∈ [0, 1+α_div] (default 1).
+ *   Use `diversityModulation` to compute it from semantic redundancy.
+ * @param params - Overrides for POTENTIAL_DECAY / POTENTIAL_FLOOR.
+ * @returns The new survival potential Φ(t+1), floored at POTENTIAL_FLOOR.
+ */
+export function updatePotential(current, importance, used, diversity = 1, params = {}) {
+    const cfg = { ...FORGETTING_DEFAULTS, ...params };
+    // Adversarial robustness: non-finite inputs must not poison the potential.
+    const phi = Number.isFinite(current) ? Math.max(cfg.POTENTIAL_FLOOR, current) : cfg.POTENTIAL_FLOOR;
+    const imp = Number.isFinite(importance) ? Math.min(1, Math.max(0, importance)) : 0;
+    const gamma = used ? 1 : 0;
+    const div = Number.isFinite(diversity) ? Math.max(0, diversity) : 1;
+    const next = phi + imp * gamma * div - cfg.POTENTIAL_DECAY;
+    return Math.max(cfg.POTENTIAL_FLOOR, next);
+}
+
+/**
+ * Diversity modulation Ψ_div (SF-AMS Eq.4): a smooth gating over semantic
+ * redundancy. Highly similar memories are down-weighted (redundant content is
+ * less worth reinforcing), while novel memories are amplified.
+ *
+ *   Ψ_div = 1 + α_div · tanh(β · (τ − Sim(m_i, M_t)))
+ *
+ * @param similarity - Semantic similarity Sim(m_i, M_t) ∈ [0,1] between the
+ *   memory and its most similar sibling. dsh has no embedding layer, so this
+ *   is a caller-supplied measure; a caller may fall back to a topic-overlap
+ *   count normalized to [0,1], or pass 1 (neutral) when unknown.
+ * @param params - Overrides for DIVERSITY_ALPHA / DIVERSITY_TAU / DIVERSITY_BETA.
+ * @returns Ψ_div ∈ [0, 1+α_div]. Neutral (1.0) when similarity equals τ.
+ */
+export function diversityModulation(similarity, params = {}) {
+    const cfg = { ...FORGETTING_DEFAULTS, ...params };
+    const sim = Number.isFinite(similarity) ? Math.min(1, Math.max(0, similarity)) : 1;
+    return 1 + cfg.DIVERSITY_ALPHA * Math.tanh(cfg.DIVERSITY_BETA * (cfg.DIVERSITY_TAU - sim));
+}
+
+/**
+ * Non-uniform tiered forgetting rate (SF-AMS Table 4).
+ *
+ * SF-AMS measures actual forget ratios per importance tier: Core 0.00%,
+ * Important 14.85%, Secondary 39.83%, Irrelevant 64.74%. The lesson is that
+ * forgetting is *non-uniform* — the lowest tier is aggressively pruned while
+ * the top tier is essentially never touched. Our `scoreBand` has three bands;
+ * this extends it to four tiers and returns the per-tier forget rate, so a
+ * caller can scale a memory's eviction priority by which tier it sits in.
+ *
+ * @param score - The composite score ∈ [0,1].
+ * @param params - Overrides for SOFT_FORGET_SCORE.
+ * @returns `{ tier, label, forgetRate }` where `tier` is 1-4 (1 = Core,
+ *   highest value; 4 = Irrelevant, lowest value) and `forgetRate` is the
+ *   SF-AMS-calibrated eviction probability for that tier.
+ */
+export function tieredForgetRate(score, params = {}) {
+    const cfg = { ...FORGETTING_DEFAULTS, ...params };
+    const s = Number.isFinite(score) ? Math.min(1, Math.max(0, score)) : 0;
+    // Tier boundaries derived from SF-AMS Table 4 (avg importance per tier):
+    // Core 0.930 / Important 0.745 / Secondary 0.546 / Irrelevant 0.356.
+    if (s >= 0.80) {
+        return { tier: 1, label: "core", forgetRate: 0.0 };
+    }
+    if (s >= 0.60) {
+        return { tier: 2, label: "important", forgetRate: 0.1485 };
+    }
+    if (s >= cfg.SOFT_FORGET_SCORE) {
+        return { tier: 3, label: "secondary", forgetRate: 0.3983 };
+    }
+    return { tier: 4, label: "irrelevant", forgetRate: 0.6474 };
 }
 
 /**

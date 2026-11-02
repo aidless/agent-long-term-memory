@@ -7,6 +7,7 @@ import { scoreBreakdown, scoreBand,
     scoreMemory, softForgetEligible, archiveEligible, isProtected,
     scanForgetting, overflowBackfill, propagationRisk,
     unarchiveEligible, scanUnarchive,
+    updatePotential, diversityModulation, tieredForgetRate,
     FORGETTING_DEFAULTS,
 } from '../src/forgetting/forgetting.js';
 
@@ -49,7 +50,7 @@ console.log('\n== V1 score model ==');
     const stale = scoreMemory(row({ title: 'Old unrelated ref' }), usage(0, '2025-05-01T00:00:00Z'), nowIso, { activeTopics: ['gpu','compute'] });
     ok(stale.score < 0.2, 'stale+unused score < 0.2', `got ${stale.score}`);
     ok(stale.redundancyFactor === 1, 'stale redundancyFactor=1 (sole topic holder)', `got ${stale.redundancyFactor}`);
-    ok(Math.abs(FORGETTING_DEFAULTS.W_TIME + FORGETTING_DEFAULTS.W_USAGE + FORGETTING_DEFAULTS.W_REDUNDANCY + FORGETTING_DEFAULTS.W_REUSE + FORGETTING_DEFAULTS.W_DRIFT - 1) < 1e-9, 'weights sum to 1');
+    ok(Math.abs(FORGETTING_DEFAULTS.W_TIME + FORGETTING_DEFAULTS.W_USAGE + FORGETTING_DEFAULTS.W_REDUNDANCY + FORGETTING_DEFAULTS.W_REUSE + FORGETTING_DEFAULTS.W_DRIFT + FORGETTING_DEFAULTS.W_POTENTIAL - 1) < 1e-9, 'weights sum to 1');
 }
 
 // ---- V2: softForgetEligible ----
@@ -180,7 +181,7 @@ console.log('\n== V9 breakdown & band ==');
     const bd = scoreBreakdown(row(), usage(3, '2026-10-30T00:00:00Z'), nowIso, { activeTopics: [] });
     ok(bd.score > 0.4, 'breakdown score > 0.4', `got ${bd.score.toFixed(3)}`);
     ok(bd.dominant === 'time' || bd.dominant === 'usage', 'dominant is time or usage', bd.dominant);
-    ok(bd.components.length === 5, '5 components', `got ${bd.components.length}`);
+    ok(bd.components.length === 6, '6 components', `got ${bd.components.length}`);
     ok(bd.components.every((c) => c.name && typeof c.contribution === 'number'), 'each component has name+contribution');
     const sum = bd.components.reduce((a, c) => a + c.contribution, 0);
     ok(Math.abs(sum - bd.score) < 1e-9, 'contributions sum to score', `sum ${sum.toFixed(4)} vs ${bd.score.toFixed(4)}`);
@@ -371,6 +372,70 @@ console.log('\n== V13 evidence-weighted shrink ==');
     expectClose(sBig.usageFactor, 1, 'use=1000 approaches linear 1', 1e-3);
 }
 
+
+// ---- V14: survival potential dynamics (v6, SF-AMS Eq.3) ----
+console.log('\n== V14 survival potential ==');
+{
+    // Fresh memory, not used, low importance: decays toward floor.
+    let phi = updatePotential(0, 0.5, false, 1);
+    ok(phi === Math.max(0, 0 - FORGETTING_DEFAULTS.POTENTIAL_DECAY), 'unused decays by lambda', `got ${phi}`);
+    // Used + important: rises.
+    const before = 0.3;
+    const after = updatePotential(before, 0.8, true, 1);
+    ok(after > before, 'used+important raises potential', `got ${after}`);
+    ok(Math.abs(after - (before + 0.8 - FORGETTING_DEFAULTS.POTENTIAL_DECAY)) < 1e-9, 'exact increment', `got ${after}`);
+    // Used + low importance: still may rise if importance > decay.
+    const low = updatePotential(0.2, 0.1, true, 1);
+    ok(Math.abs(low - (0.2 + 0.1 - FORGETTING_DEFAULTS.POTENTIAL_DECAY)) < 1e-9, 'low importance used', `got ${low}`);
+    // Never goes below floor.
+    const floor = updatePotential(0.01, 0.1, false, 1);
+    ok(floor === 0, 'floored at 0', `got ${floor}`);
+    // Diversity modulation: novel (sim < tau) boosts, redundant (sim > tau) dampens.
+    const novel = updatePotential(0.5, 0.8, true, diversityModulation(0.2));
+    const redundant = updatePotential(0.5, 0.8, true, diversityModulation(0.9));
+    ok(novel > redundant, 'novel memory gets more reinforcement than redundant', `novel=${novel} redundant=${redundant}`);
+    // Adversarial: NaN inputs do not poison.
+    const nanPot = updatePotential(NaN, NaN, true, NaN);
+    ok(Number.isFinite(nanPot), 'NaN inputs produce finite potential', `got ${nanPot}`);
+    // diversityModulation neutral at similarity = tau.
+    const neutral = diversityModulation(FORGETTING_DEFAULTS.DIVERSITY_TAU);
+    ok(Math.abs(neutral - 1) < 1e-9, 'neutral at sim=tau', `got ${neutral}`);
+    // Bounded: phi never exceeds a sane ceiling (importance<=1, div<=1+alpha).
+    const cap = updatePotential(5, 1, true, 1 + FORGETTING_DEFAULTS.DIVERSITY_ALPHA);
+    ok(Number.isFinite(cap) && cap <= 5 + 1.5, 'bounded accumulation', `got ${cap}`);
+}
+
+// ---- V15: tiered forgetting rate (v6, SF-AMS Table 4) ----
+console.log('\n== V15 tiered forgetting ==');
+{
+    // Tier 1 (core): score >= 0.80 -> never forgotten.
+    const core = tieredForgetRate(0.93);
+    ok(core.tier === 1 && core.forgetRate === 0, 'core tier forgetRate=0', JSON.stringify(core));
+    // Tier 2 (important): score in [0.60, 0.80).
+    const imp = tieredForgetRate(0.745);
+    ok(imp.tier === 2 && Math.abs(imp.forgetRate - 0.1485) < 1e-9, 'important tier rate=0.1485', JSON.stringify(imp));
+    // Tier 3 (secondary): score in [threshold, 0.60).
+    const sec = tieredForgetRate(0.546);
+    ok(sec.tier === 3 && Math.abs(sec.forgetRate - 0.3983) < 1e-9, 'secondary tier rate=0.3983', JSON.stringify(sec));
+    // Tier 4 (irrelevant): score < threshold.
+    const irr = tieredForgetRate(0.10);
+    ok(irr.tier === 4 && Math.abs(irr.forgetRate - 0.6474) < 1e-9, 'irrelevant tier rate=0.6474', JSON.stringify(irr));
+    // Monotonic: forget rate strictly increases as tier goes down.
+    const rates = [core.forgetRate, imp.forgetRate, sec.forgetRate, irr.forgetRate];
+    ok(rates.every((r, i) => i === 0 || r > rates[i - 1]), 'forget rate increases down tiers', rates.join(','));
+    // Adversarial: NaN score -> treated as irrelevant (safest).
+    const nanTier = tieredForgetRate(NaN);
+    ok(nanTier.tier === 4, 'NaN score -> irrelevant tier', JSON.stringify(nanTier));
+    // Score with potential dimension: a high-potential memory is retained.
+    const potBase = { id: 'pot', title: 'potential', type: 'reference', status: 'active' };
+    const potCtx = { activeTopics: [], potential: 0.9 };
+    const highPot = scoreMemory(potBase, { useCount: 2, lastUsedAt: nowIso }, nowIso, potCtx);
+    ok(highPot.score > 0.4, 'high potential retains score', `got ${highPot.score.toFixed(3)}`);
+    // Score with zero potential: lower than with high potential.
+    const lowPotCtx = { activeTopics: [], potential: 0 };
+    const lowPot = scoreMemory(potBase, { useCount: 2, lastUsedAt: nowIso }, nowIso, lowPotCtx);
+    ok(lowPot.score < highPot.score, 'zero potential scores lower', `low=${lowPot.score.toFixed(3)} high=${highPot.score.toFixed(3)}`);
+}
 
 
 console.log(`\n==== TOTAL: ${pass} PASS / ${fail} FAIL ====`);

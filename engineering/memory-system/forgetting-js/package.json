@@ -1,6 +1,6 @@
 {
   "name": "selective-forgetting",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Selective forgetting for LLM agent memory: dual-stage soft-forget/archive with multi-factor scoring, evidence-weighted usage shrink, un-archive re-evaluation, and adversarial robustness.",
   "type": "module",
   "main": "src/forgetting/forgetting.js",

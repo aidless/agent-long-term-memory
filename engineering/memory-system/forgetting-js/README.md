@@ -221,3 +221,52 @@ shrink       = useCount / (useCount + EVIDENCE_HALF)
 「证据量」部分，不伪造失败信号。测试 82 PASS。
 
 完整 v5 交付报告见 [docs/v5-evidence-shrink-report.md](docs/v5-evidence-shrink-report.md)。
+
+## v6: 生存势能动态 + 层级非均匀遗忘（2026-11-01）
+
+v6 把论文《Strategic Forgetting for Structured Memory》(arXiv:2607.22562) 的两个洞见落地，
+把静态评分器升级为**动态演化系统**：
+
+1. **生存势能动态**（Eq.3 增量累积）：每条记忆携带状态量 Φ(t)，
+   被使用时按重要性累积、每次巡检按 λ 衰减。评分第 6 维奖励「反复有用」的记忆，
+   衰减「长期无用」的记忆。
+
+   ```
+   Φ(t+1) = max(0, Φ(t) + I·Γ_usage·Ψ_div − λ)
+   ```
+
+   - `I` = 记忆重要性（本实现用 scoreMemory 的分数）
+   - `Γ_usage` = 使用信号（used=1 / unused=0）
+   - `Ψ_div` = 多样性调制（`diversityModulation`，tanh gating，sim=τ 时中性=1）
+   - `λ` = POTENTIAL_DECAY（默认 0.02）
+   - 下限 `POTENTIAL_FLOOR`（默认 0），NaN 输入鲁棒
+
+2. **层级非均匀遗忘**（Table 4）：按分数分四层，遗忘率非均匀——
+
+   | tier | label | score 范围 | forgetRate |
+   |------|-------|-----------|------------|
+   | 1 | core | ≥ 0.80 | 0 |
+   | 2 | important | [0.60, 0.80) | 0.1485 |
+   | 3 | secondary | [SOFT_FORGET_SCORE, 0.60) | 0.3983 |
+   | 4 | irrelevant | < SOFT_FORGET_SCORE | 0.6474 |
+
+### 权重重平衡（和=1）
+
+v6 引入第 6 维后重新平衡：
+
+```
+W_TIME=0.40  W_USAGE=0.23  W_REDUNDANCY=0.14
+W_REUSE=0.05 W_DRIFT=0.08  W_POTENTIAL=0.10
+```
+
+### 新增 API
+
+- `updatePotential(current, importance, used, diversity, params)` → Φ(t+1)
+- `diversityModulation(similarity, params)` → Ψ_div
+- `tieredForgetRate(score, params)` → `{tier, label, forgetRate}`
+
+### 测试
+
+V14（生存势能 10 断言）+ V15（层级遗忘 8 断言），全套 **99 PASS / 0 FAIL**。
+
+完整 v6 交付报告见 [docs/v6-enhancement-report.md](docs/v6-enhancement-report.md)。
