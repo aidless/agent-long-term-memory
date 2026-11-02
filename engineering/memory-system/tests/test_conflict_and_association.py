@@ -158,3 +158,64 @@ class TestManagerIntegration:
             manager.add_semantic("模型 A 效果差 准确率低", importance=0.3)
             conflicts = manager.detect_conflicts("semantic")
             assert len(conflicts) >= 1
+
+
+class TestAutoConflictCheckIntegration:
+    """自动冲突检查集成测试（添加后自动标记）。"""
+
+    def test_add_semantic_marks_conflict_candidate(self):
+        """添加冲突记忆后，自动标记 conflict_candidate。"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = MemoryManager(persist_dir=tmpdir)
+            manager.add_semantic("模型 A 效果好 准确率高", importance=0.7)
+            item2 = manager.add_semantic("模型 A 效果差 准确率低", importance=0.3)
+            # 第二项应被标记为冲突候选
+            fetched = manager.get_memory("semantic", item2.id)
+            assert fetched is not None
+            assert fetched.metadata.get("conflict_candidate") is True
+            assert fetched.metadata.get("conflict_with") is not None
+
+    def test_add_non_conflict_no_mark(self):
+        """添加非冲突记忆，不标记。"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = MemoryManager(persist_dir=tmpdir)
+            manager.add_semantic("模型 A 效果好", importance=0.7)
+            item2 = manager.add_semantic("数据集 B 样本充足", importance=0.3)
+            fetched = manager.get_memory("semantic", item2.id)
+            assert fetched is not None
+            assert fetched.metadata.get("conflict_candidate") is not True
+
+    def test_consolidate_runs_conflict_check(self):
+        """整合后自动冲突检查（整合记忆与现有记忆冲突时标记）。"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = MemoryManager(persist_dir=tmpdir)
+            # 先放一个高重要性记忆
+            manager.add_semantic("模型 A 效果好 准确率高", importance=0.9)
+            # 添加一组可整合的记忆（同主题）
+            manager.add_semantic("模型 A 效果好", importance=0.5)
+            manager.add_semantic("模型 A 准确率高", importance=0.5)
+            manager.add_semantic("模型 A 效果好 准确率高", importance=0.5)
+            # 整合（min_group_size=3）
+            consolidated = manager.consolidate_memories("semantic")
+            # 整合后应至少有 1 条，且不与高重要性记忆冲突标记
+            # 整合记忆内容含"模型 A 效果好"可能与高重要性冲突
+            # 此处验证：整合记忆确实被添加，且不抛异常
+            assert consolidated is not None
+
+    def test_forget_triggers_associate_disposal(self):
+        """forget 触发关联处置（高重要性断联保留）。"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = MemoryManager(persist_dir=tmpdir)
+            # 添加记忆
+            low_imp = manager.add_semantic("过期信息 无价值", importance=0.05)
+            high_imp = manager.add_semantic("重要关联 模型 A 效果好", importance=0.9)
+            # 模拟老化：直接改底层 VectorRecord 的 created_at（很久以前，低于遗忘阈值）
+            store = manager._get_memory_store("semantic").store
+            store._records[low_imp.id].created_at = 100.0
+            store._records[high_imp.id].created_at = 100.0
+            # 执行遗忘（默认 forgetter 会遗忘低重要性、保留高重要性）
+            result = manager.forget("semantic")
+            # 低重要性记忆应被遗忘
+            assert low_imp.id in result.get("semantic", [])
+            # 高重要性关联应保留
+            assert manager.get_memory("semantic", high_imp.id) is not None

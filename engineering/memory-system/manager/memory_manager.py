@@ -71,16 +71,22 @@ class MemoryManager:
     # ==================== 写入操作 ====================
 
     def add_semantic(self, content: str, importance: float = 0.5, metadata: Optional[dict] = None, **kwargs) -> MemoryItem:
-        """添加语义记忆。"""
-        return self.semantic.add(content, metadata=metadata, importance=importance, **kwargs)
+        """添加语义记忆（自动检测冲突）。"""
+        item = self.semantic.add(content, metadata=metadata, importance=importance, **kwargs)
+        self._auto_conflict_check(item)
+        return item
 
     def add_episodic(self, content: str, importance: float = 0.5, metadata: Optional[dict] = None, **kwargs) -> MemoryItem:
-        """添加情景记忆。"""
-        return self.episodic.add(content, metadata=metadata, importance=importance, **kwargs)
+        """添加情景记忆（自动检测冲突）。"""
+        item = self.episodic.add(content, metadata=metadata, importance=importance, **kwargs)
+        self._auto_conflict_check(item)
+        return item
 
     def add_procedural(self, content: str, importance: float = 0.5, metadata: Optional[dict] = None, **kwargs) -> MemoryItem:
-        """添加程序记忆。"""
-        return self.procedural.add(content, metadata=metadata, importance=importance, **kwargs)
+        """添加程序记忆（自动检测冲突）。"""
+        item = self.procedural.add(content, metadata=metadata, importance=importance, **kwargs)
+        self._auto_conflict_check(item)
+        return item
 
     def add_working(self, content: str, importance: float = 0.5, metadata: Optional[dict] = None, **kwargs) -> MemoryItem:
         """添加工作记忆。"""
@@ -253,6 +259,8 @@ class MemoryManager:
                     importance=new_memory.importance,
                     metadata=new_memory.metadata,
                 )
+                # 自动冲突检查（整合后的记忆也可能与现有记忆冲突）
+                self._auto_conflict_check(item)
                 consolidated.append(item)
 
         return consolidated
@@ -388,9 +396,17 @@ class MemoryManager:
             memories = memory_store.list_all()
             forgotten_ids, retained = self.forgetter.forget(memories)
 
-            # 删除被遗忘的记忆
+            # 删除被遗忘的记忆，并对其关联记忆执行处置（级联/断联）
             for fid in forgotten_ids:
-                memory_store.delete(fid)
+                # 找出关联记忆（同类型，排除被遗忘者）
+                associates = [
+                    m.id for m in memories
+                    if m.id != fid and m.id not in forgotten_ids
+                ]
+                if associates:
+                    self.forget_with_associates(mtype, fid, associates)
+                else:
+                    memory_store.delete(fid)
 
             result[mtype] = forgotten_ids
 
@@ -426,6 +442,44 @@ class MemoryManager:
             "working": self.working,
         }
         return stores.get(memory_type)
+
+    def _auto_conflict_check(self, item: MemoryItem) -> list[dict]:
+        """
+        自动冲突检查（添加新记忆后调用）。
+
+        检测新记忆与同类型现有记忆的冲突，冲突时标记 metadata
+        （conflict_candidate + conflict_with），而非立即删除——保留信息供上层决策。
+
+        Args:
+            item: 刚添加的记忆项
+
+        Returns:
+            冲突标记记录列表
+        """
+        memory_store = self._get_memory_store(item.memory_type)
+        if not memory_store:
+            return []
+
+        # 收集全部记忆（现有 + 新），找涉及新记忆的冲突对
+        all_memories = memory_store.list_all()
+        conflicts = self.conflict_detector.find_conflicts(all_memories)
+
+        marks = []
+        for m1, m2 in conflicts:
+            if m1.id != item.id and m2.id != item.id:
+                continue  # 不涉及新记忆，跳过
+            other = m2 if m1.id == item.id else m1
+            # 标记新记忆的元数据
+            meta = dict(item.metadata or {})
+            meta["conflict_candidate"] = True
+            meta["conflict_with"] = other.id
+            memory_store.update(item.id, metadata=meta)
+            marks.append({
+                "memory_id": item.id,
+                "conflict_with": other.id,
+                "other_content": other.content,
+            })
+        return marks
 
     def _track_reference(self, memory_id: str, query: str) -> None:
         """追踪记忆引用。"""
