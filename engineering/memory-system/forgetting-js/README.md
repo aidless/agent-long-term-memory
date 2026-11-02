@@ -173,6 +173,7 @@ const repo = {
 | `MIN_ACTIVE` | 12 | Never forget below this many active memories |
 | `DECAY_RATE` | 0.05 | Ebbinghaus decay rate (half-life ≈ 14 days) |
 | `USAGE_SATURATION` | 3 | Use count at which usage factor saturates |
+| `EVIDENCE_HALF` | 2 | Use count at which the evidence shrink is at half strength |
 | `REDUNDANCY_SATURATION` | 3 | Same-topic siblings at which redundancy saturates |
 | `REUSE_BOOST` | 1.0 | Cross-workspace reference count at which reuse saturates |
 | `TOPIC_MATCH_BONUS` | 1.0 | Drift factor when a memory matches an active topic |
@@ -188,7 +189,7 @@ const repo = {
 
 ```bash
 npm install
-npm test   # 56 assertions, pure-function + minimal-repo-mock
+npm test   # 82 assertions, pure-function + minimal-repo-mock
 ```
 
 ## License
@@ -198,3 +199,23 @@ MIT. See [LICENSE](./LICENSE).
 ## v4 增强报告
 
 完整 v4 迭代（插件集成/权重校准/归档再评估/对抗鲁棒/npm 准备）见 [docs/v4-enhancement-report.md](docs/v4-enhancement-report.md)。
+
+## v5: 证据加权收缩（evidence-weighted usage shrink）
+
+v5 把论文《When to Forget》(arXiv:2604.12007) 的「证据量」洞见落地：
+`usage_factor` 从线性饱和改为**证据加权收缩**——低使用记忆（低证据量）向中性
+0.5 收缩，避免「用过 1 次」和「用过 20 次」被同样对待；高使用记忆回到线性饱和值。
+
+```
+usage_factor = useCount === 0 ? 0
+             : 0.5 + (linearUsage - 0.5) * shrink
+shrink       = useCount / (useCount + EVIDENCE_HALF)
+```
+
+- `use=0`（无证据）保持 0，继续可遗忘；
+- `use>=1`（有证据但不确定）向 0.5 收缩；
+- `use→∞` 趋近线性饱和值 1。
+
+可行性边界（诚实声明）：dsh 有正信号（`use_count`，按 id 读取时触发）但无负信号
+（检索失败不记录），所以 Memory Worth 的「成功/失败比值」**不可落地**；本 v5 只落地
+「证据量」部分，不伪造失败信号。测试 82 PASS。

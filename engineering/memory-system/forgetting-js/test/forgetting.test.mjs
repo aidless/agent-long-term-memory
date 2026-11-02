@@ -332,5 +332,46 @@ console.log('\n== V12 adversarial ==');
 }
 
 
+// ---- V13: evidence-weighted usage shrink (v5) ----
+console.log('\n== V13 evidence-weighted shrink ==');
+{
+    const now = '2026-11-01T00:00:00Z';
+    const ctx = { activeTopics: [] };
+    const base = { id: 'ev', title: 'evidence', type: 'reference', status: 'active' };
+    const expectClose = (got, want, name, eps = 1e-9) => {
+        if (Math.abs(got - want) <= eps) { pass++; }
+        else { fail++; console.log(`  FAIL ${name}: got ${got}, want ${want}`); }
+    };
+    // use=0: usageFactor stays 0 (no evidence -> continue forgettable).
+    const s0 = scoreMemory(base, { useCount: 0, lastUsedAt: now }, now, ctx);
+    expectClose(s0.usageFactor, 0, 'use=0 keeps usageFactor 0');
+    // use=1: linear=1/3, shrink=1/3 -> 0.5 + (0.333-0.5)*0.333 = 0.444 (shrunk toward 0.5).
+    const s1 = scoreMemory(base, { useCount: 1, lastUsedAt: now }, now, ctx);
+    expectClose(s1.usageFactor, 0.5 + (1/3 - 0.5) * (1/3), 'use=1 shrinks toward 0.5');
+    // use=2: linear=2/3, shrink=1/2 -> 0.5 + (0.667-0.5)*0.5 = 0.583 (shrunk toward 0.5).
+    const s2 = scoreMemory(base, { useCount: 2, lastUsedAt: now }, now, ctx);
+    expectClose(s2.usageFactor, 0.5 + (2/3 - 0.5) * (1/2), 'use=2 shrinks toward 0.5');
+    // use=3: linear=1, shrink=3/5 -> 0.5 + 0.5*0.6 = 0.8 (approaching linear).
+    const s3 = scoreMemory(base, { useCount: 3, lastUsedAt: now }, now, ctx);
+    expectClose(s3.usageFactor, 0.5 + 0.5 * (3/5), 'use=3 approaches linear');
+    // Monotonic: usageFactor(0) < usageFactor(1) < usageFactor(2) < usageFactor(3).
+    if (s0.usageFactor < s1.usageFactor && s1.usageFactor < s2.usageFactor && s2.usageFactor < s3.usageFactor) {
+        pass++;
+    } else {
+        fail++; console.log('  FAIL usageFactor not monotonic in useCount');
+    }
+    // Bounded: 0 <= usageFactor <= 1 for all use counts.
+    for (const u of [0, 1, 2, 3, 10, 100]) {
+        const s = scoreMemory(base, { useCount: u, lastUsedAt: now }, now, ctx);
+        if (s.usageFactor >= 0 && s.usageFactor <= 1) { pass++; }
+        else { fail++; console.log(`  FAIL use=${u} usageFactor=${s.usageFactor} out of range`); }
+    }
+    // Large use -> approaches linear 1.
+    const sBig = scoreMemory(base, { useCount: 1000, lastUsedAt: now }, now, ctx);
+    expectClose(sBig.usageFactor, 1, 'use=1000 approaches linear 1', 1e-3);
+}
+
+
+
 console.log(`\n==== TOTAL: ${pass} PASS / ${fail} FAIL ====`);
 process.exit(fail > 0 ? 1 : 0);

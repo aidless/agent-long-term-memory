@@ -72,6 +72,8 @@ export const FORGETTING_DEFAULTS = {
     TOPIC_MATCH_BONUS: 1.0,
     /** Score above which an archived memory is worth un-archiving (re-evaluated). */
     UNARCHIVE_SCORE: 0.5,
+    /** Use-count at which the evidence-weighted usage factor is half-shrunk. */
+    EVIDENCE_HALF: 2,
 };
 
 /**
@@ -195,7 +197,14 @@ export function scoreMemory(row, usage, nowIso, ctx = {}, params = {}) {
     // Dimension 1: temporal decay (Ebbinghaus). High when recently used.
     const timeFactor = Math.exp(-cfg.DECAY_RATE * days);
     // Dimension 2: usage frequency (saturating). High when used often.
-    const usageFactor = Math.min(1, useCount / cfg.USAGE_SATURATION);
+    // Dimension 2: usage frequency, evidence-weighted shrink toward neutral.
+    // Low-evidence memories (few uses) shrink toward 0.5 so "used once" and
+    // "used zero" are not over-distinguished; high-evidence memories keep
+    // the linear saturating value. EVIDENCE_HALF is the use count at which
+    // the shrink is half-way (evidence half-life).
+    const linearUsage = Math.min(1, useCount / cfg.USAGE_SATURATION);
+    const shrink = useCount / (useCount + cfg.EVIDENCE_HALF);
+    const usageFactor = useCount === 0 ? 0 : 0.5 + (linearUsage - 0.5) * shrink;
     // Dimension 3: content redundancy. High when few same-topic siblings;
     // low when the topic is crowded (duplicate content is forgettable).
     const siblings = ctx?.sameTopicCount ?? 0;
