@@ -437,6 +437,55 @@ console.log('\n== V15 tiered forgetting ==');
     ok(lowPot.score < highPot.score, 'zero potential scores lower', `low=${lowPot.score.toFixed(3)} high=${highPot.score.toFixed(3)}`);
 }
 
+// ---- V16: tier-driven soft-forget probability (v7 direction ②) ----
+console.log('\n== V16 tier-driven soft-forget ==');
+{
+    // Build a workspace of 30 low-score (irrelevant tier 4) memories.
+    const wsId = 'ws-tier';
+    const tierRows = Array.from({ length: 30 }, (_, i) => ({
+        id: `t${i}`, title: `low${i}`, body: '', description: '', type: 'reference',
+        status: 'active', soft_forgotten_at: null, updated_at: '2026-01-01T00:00:00Z',
+        useCount: 0, score: 0.05, potential: 0.5,
+    }));
+    const tierRepo = {
+        listRows: () => tierRows,
+        getUsage: (ws, ids) => {
+            const r = tierRows.find((x) => x.id === (ids?.[0] ?? ws));
+            return r ? { use_count: 0, last_used_at: null } : { use_count: 0, last_used_at: null };
+        },
+    };
+    // When TIER_DRIVES_SOFT_FORGET is off (default), every candidate is admitted.
+    const off = scanForgetting(tierRepo, wsId, nowIso, { MIN_ACTIVE: 1 });
+    ok(off.softForgetCandidates.length === 30, 'default admits all candidates', `got ${off.softForgetCandidates.length}`);
+    ok(off.softForgetCandidates.every((c) => c.tier === 4), 'candidates carry tier=4', JSON.stringify(off.softForgetCandidates[0]));
+    // When on, admission is probabilistic near the tier-4 forgetRate (0.6474).
+    // 30 candidates × 60 runs gives a stable estimate.
+    let admitted = 0, trials = 0;
+    for (let run = 0; run < 60; run++) {
+        const on = scanForgetting(tierRepo, wsId, nowIso, { MIN_ACTIVE: 1, TIER_DRIVES_SOFT_FORGET: true });
+        admitted += on.softForgetCandidates.length;
+        trials += tierRows.length;
+    }
+    const rate = admitted / trials;
+    ok(rate > 0.55 && rate < 0.75, `probabilistic admission near tier-4 rate (got ${(rate * 100).toFixed(1)}%)`, `admitted ${admitted}/${trials}`);
+    // A tier-2 (important) memory is admitted far less often than tier-4.
+    const impRows = [{
+        id: 'imp', title: 'important', body: '', description: '', type: 'reference',
+        status: 'active', soft_forgotten_at: null, updated_at: '2026-10-15T00:00:00Z',
+        useCount: 1, score: 0.745, potential: 0.5,
+    }];
+    const impRepo = {
+        listRows: () => impRows,
+        getUsage: (ws, ids) => ({ use_count: 1, last_used_at: null }),
+    };
+    let impAdmitted = 0;
+    for (let run = 0; run < 60; run++) {
+        const on = scanForgetting(impRepo, wsId, nowIso, { MIN_ACTIVE: 0, TIER_DRIVES_SOFT_FORGET: true });
+        if (on.softForgetCandidates.length > 0) impAdmitted++;
+    }
+    ok(impAdmitted < 20, `tier-2 admitted less often (got ${impAdmitted}/60)`, `expected < 20/60 (~14.9%)`);
+}
+
 
 console.log(`\n==== TOTAL: ${pass} PASS / ${fail} FAIL ====`);
 process.exit(fail > 0 ? 1 : 0);

@@ -90,6 +90,9 @@ export const FORGETTING_DEFAULTS = {
     DIVERSITY_BETA: 5.0,
     /** Floor for the survival potential (a long-unused memory never goes negative). */
     POTENTIAL_FLOOR: 0,
+    /** When true, soft-forget candidates are admitted probabilistically by tier
+     *  forgetRate (v7 direction ②) instead of being all demoted in one sweep. */
+    TIER_DRIVES_SOFT_FORGET: false,
 };
 
 /**
@@ -675,7 +678,22 @@ export function scanForgetting(repo, workspaceId, nowIso, params = {}) {
         }
 
         if (eligible.eligible && activeCount > cfg.MIN_ACTIVE) {
-            softForgetCandidates.push({ id: row.id, title: row.title, reason: eligible.reason, score: eligible.diagnostics?.score ?? null, daysSinceLastUse: eligible.diagnostics?.daysSinceLastUse ?? null });
+            // v7 direction ②: when TIER_DRIVES_SOFT_FORGET is explicitly on,
+            // a candidate is admitted with probability equal to its tier's
+            // forgetRate, so a patrol pass demotes only a fraction of the
+            // low-score population instead of emptying it in one sweep. This
+            // makes the demotion rate continuous in score (a row at score 0.55
+            // is demoted at ~40% per pass, one at 0.10 at ~65%), and keeps the
+            // "irrelevant tier" from being cleared wholesale on a single pass.
+            let admitted = true;
+            if (cfg.TIER_DRIVES_SOFT_FORGET) {
+                const tier = tieredForgetRate(eligible.diagnostics?.score ?? 0, params);
+                admitted = Math.random() < tier.forgetRate;
+            }
+            if (admitted) {
+                const tier = tieredForgetRate(eligible.diagnostics?.score ?? 0, params);
+                softForgetCandidates.push({ id: row.id, title: row.title, reason: eligible.reason, score: eligible.diagnostics?.score ?? null, daysSinceLastUse: eligible.diagnostics?.daysSinceLastUse ?? null, tier: tier.tier, forgetRate: tier.forgetRate });
+            }
         }
     }
 
