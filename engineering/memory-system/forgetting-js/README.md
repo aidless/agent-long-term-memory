@@ -144,6 +144,8 @@ import {
   scanForgetting,     // find candidates (uses a repo)
   overflowBackfill,   // budget-pressure escape hatch
   propagationRisk,    // is this row load-bearing?
+  unarchiveEligible,  // should an archived row be restored?
+  scanUnarchive,      // find archived rows that earned their way back
   FORGETTING_DEFAULTS // tunable parameters
 } from 'selective-forgetting';
 ```
@@ -175,17 +177,18 @@ const repo = {
 | `REUSE_BOOST` | 1.0 | Cross-workspace reference count at which reuse saturates |
 | `TOPIC_MATCH_BONUS` | 1.0 | Drift factor when a memory matches an active topic |
 | `OVERFLOW_EVICTION_FRACTION` | 1.15 | Budget pressure threshold for overflow eviction |
-| `W_TIME` | 0.35 | Weight: temporal decay |
+| `UNARCHIVE_SCORE` | 0.5 | Score above which an archived row is restored |
+| `W_TIME` | 0.45 | Weight: temporal decay |
 | `W_USAGE` | 0.25 | Weight: usage frequency |
 | `W_REDUNDANCY` | 0.15 | Weight: content redundancy |
-| `W_REUSE` | 0.15 | Weight: cross-project reuse |
+| `W_REUSE` | 0.05 | Weight: cross-project reuse |
 | `W_DRIFT` | 0.10 | Weight: topic drift |
 
 ## Install & test
 
 ```bash
 npm install
-npm test   # 25 assertions, pure-function + minimal-repo-mock
+npm test   # 56 assertions, pure-function + minimal-repo-mock
 ```
 
 ## License

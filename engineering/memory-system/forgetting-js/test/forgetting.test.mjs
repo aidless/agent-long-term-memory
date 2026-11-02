@@ -8,7 +8,7 @@ import { scoreBreakdown, scoreBand,
     scanForgetting, overflowBackfill, propagationRisk,
     unarchiveEligible, scanUnarchive,
     FORGETTING_DEFAULTS,
-} from '../src/forgetting.js';
+} from '../src/forgetting/forgetting.js';
 
 let pass = 0, fail = 0;
 function ok(cond, name, detail = '') {
