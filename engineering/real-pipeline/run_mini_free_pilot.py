@@ -8,7 +8,7 @@
 
 规模（免费额度内，非正式标定）：
     6 任务 × 1 seed × 3 臂 = 18 条轨迹，每条约 24 节点 × ~600 prompt token
-    ≈ 26 万 token。这是微型 pilot，给粗略参数估计，**不是**正式 P6 运行。
+    ≈ 46 万 token（真实观测 ~1070/节点，含 reasoning），远超免费日限 35k。这是微型 pilot，给粗略参数估计，**不是**正式 P6 运行。
 
 AGENTS.md 纪律：
     - 本地只做编排；实际 LLM 调用消耗 Magpie 免费额度，需用户授权（本脚本不自动执行）。
@@ -68,7 +68,7 @@ DEFAULT_SEEDS = [0]
 ARMS = ["baseline", "full", "abl_noNegot"]
 
 # 免费额度预算保护（软上限，超过即停，避免 429）
-MAX_TOKEN_BUDGET = 300_000
+MAX_TOKEN_BUDGET = 500_000
 
 
 # ===================== DAG 任务源 =====================
@@ -209,7 +209,7 @@ def execute_tool_real(tool: str, args: dict[str, Any], ctx: dict[str, Any]) -> b
 # ===================== LLM 调用（真实 agent） =====================
 
 def llm_call_tool(base: str, model: str, messages: list[dict[str, Any]],
-                  tools: list[dict[str, Any]], max_tokens: int = 512,
+                  tools: list[dict[str, Any]], max_tokens: int = 1024,
                   timeout: int = 60) -> dict[str, Any]:
     """单次 LLM 工具调用（真实）。返回 {finish_reason, tool_call, text, usage}。"""
     if not HAS_REQUESTS:
@@ -632,7 +632,7 @@ def main() -> int:
 
     if args.dry_run:
         # 预算估算：6 任务 × 1 seed × 3 臂 × 24 节点 × ~600 token
-        est_tokens = args.n_tasks * len(ARMS) * 24 * 600
+        est_tokens = args.n_tasks * len(ARMS) * 24 * 1100
         est_cells = args.n_tasks * len(ARMS)
         print(json.dumps({
             "mode": "dry-run",
@@ -643,8 +643,8 @@ def main() -> int:
                 "budget_max": MAX_TOKEN_BUDGET,
                 "within_budget": est_tokens <= MAX_TOKEN_BUDGET,
             },
-            "note": "免费通道实测约 35k token 触发 429；本 pilot 需约 26 万，可能超免费额度，"
-                    "实际运行需授权且需分批。",
+            "note": "免费通道实测约 35k token/日触发 429；本 pilot 需约 46 万 token（18轨迹 x 24节点 x ~1100），"
+                    "远超免费日限，无法一次跑完。实际运行需授权，且只能分批/改用额度内通道。",
         }, indent=2, ensure_ascii=False))
         return 0
 

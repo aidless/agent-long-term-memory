@@ -1,0 +1,46 @@
+{
+  "task_id": "T08",
+  "layer": "L-low",
+  "arm": "full",
+  "success": true,
+  "steps": 2,
+  "tools": 2,
+  "tool_fails": 0,
+  "mem_hits": 1,
+  "mem_hit_rate": 0.5,
+  "neg_decisions": [
+    "allow",
+    "allow"
+  ],
+  "neg_violations": 0,
+  "neg_tokens": 0,
+  "forget_calls": 0,
+  "conflict_detected": 0,
+  "has_memory": true,
+  "has_negotiation": true,
+  "total_tokens": 2086,
+  "trace": [
+    {
+      "step": 0,
+      "tool": "grep_scan",
+      "decision": "execute",
+      "success": true,
+      "mem_hit": false,
+      "neg": "allow",
+      "tokens": 959
+    },
+    {
+      "step": 1,
+      "tool": "hash_sha256",
+      "decision": "execute",
+      "success": true,
+      "mem_hit": true,
+      "neg": "allow",
+      "tokens": 2086
+    }
+  ],
+  "synthetic": false,
+  "calibration": true,
+  "model": "opencode-zen-free/deepseek-v4.1-flash-free",
+  "note": "真实 LLM 轨迹冒烟（2 节点），C1 最小证据，非正式标定"
+}
