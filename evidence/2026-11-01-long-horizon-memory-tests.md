@@ -2,7 +2,7 @@
 
 > 日期：2026-11-01
 > 测试文件：`engineering/memory-system/tests/test_long_horizon.py`（6 个测试）
-> 结果：**83 passed**（77 基线 + 6 新增长程任务测试）
+> 结果：**112 passed**（完整套件；含 6 个长程任务测试。本文件记录的是新增测试当时的口径 83，实测当前为 112）
 
 ## 测试内容
 
@@ -25,7 +25,7 @@
 ## 复现命令
 
 ```bash
-cd /home/liuzewen/F:\\deepseek/agent-long-term-memory
+cd <REPO_ROOT>
 python3 -m pytest engineering/memory-system/tests/ -q
-# 预期：83 passed
+# 预期：112 passed
 ```
