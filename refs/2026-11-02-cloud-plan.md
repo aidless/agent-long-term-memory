@@ -57,3 +57,34 @@ If the user prefers not to spend GPU/quota now, the calibration stays a
 protocol+plan (this repo's `refs/` documents). C1 remains open and the paper
 stays a "research+engineering report", which is honest and consistent with
 the P6 preregistration.
+
+## 7. Free-channel capacity audit (2026-11-02, probed)
+
+The user asked to find a FREE path first. Findings:
+
+| Free channel | Status | Capacity |
+|--------------|--------|----------|
+| `opencode-zen-free/deepseek-v4.1-flash-free` | ✅ usable now (tool-call works) | **NOT enough**: 429 "free usage limit reached" after ~35k tokens today; needs ~6.2M tokens for 432 trajectories |
+| `opencode-zen-free/mimo-v2.6-flash-free` | ✅ usable now (tool-call works) | same free limit |
+| openrouter `*:free` | ❌ blocked by account privacy setting | n/a |
+| `opencode-go/*-free` | ❌ "not available in your country" | n/a |
+
+### Conclusion
+
+The free channels are **intermittent and small-capacity**: opencode-zen-free
+returned 429 (limit reached) after ~35k tokens today, while the calibration
+needs ~6.2M prompt tokens (432 trajectories × 24 nodes × ~600 prompt tokens).
+**The free path alone cannot support the full calibration sweep.**
+
+### Options for the user
+
+1. **Shrink calibration**: run a mini-pilot (e.g. 6 tasks × 1 seed × 3 arms =
+   18 trajectories ≈ 260k tokens) within the free channel, only if the free
+   quota resets. This gives a rough parameter estimate, NOT the formal run.
+2. **Use an in-quota free-plan channel**: `volcengine` (month 100k units) or
+   `minimax-code` (4824 credits) — these are "free plan within monthly quota",
+   may cover 6.2M tokens but are not strictly $0.
+3. **Authorize a small paid budget**: `openrouter` has $8.28 balance; a partial
+   calibration within budget is possible but not full.
+4. **Defer**: keep calibration as protocol+plan, C1 stays open, paper stays a
+   report. Most honest if the user does not want to spend.
