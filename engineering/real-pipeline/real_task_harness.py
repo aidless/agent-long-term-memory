@@ -159,11 +159,25 @@ class RealAgentHarness:
         self.base_mem_hit_rate = 0.4  # 基线记忆命中率（无记忆系统）
 
     def _new_memory(self, group: str, seed: int) -> MemoryManager:
-        """按组别创建记忆系统实例。"""
+        """按组别创建记忆系统实例。
+
+        三个参考臂（coskill / compact_memory / continuity）使用**真实记忆组件**
+        做机制差异化（机制操作化，非外部系统复现）：
+        - coskill：procedural 技能记忆（协作技能共享，add_procedural + search_procedural_only）
+        - compact_memory：语义记忆压缩（consolidate_memories，MockLLMConsolidator）
+        - continuity：关联遗忘保留（forget() 内部经 forget_with_associates 保关联链）
+        这些机制影响真实检索命中（mem_hit），再经记忆收益影响任务成功。
+        """
         # 使用临时目录（真实存储）+ 真实遗忘配置（容量限制触发遗忘）
         import tempfile
         tmp = tempfile.mkdtemp(prefix=f"mem_{group}_{seed}_")
         mm = MemoryManager(persist_dir=tmp, forget_config=REAL_FORGET_CONFIG)
+        # 附加机制模式（供 run_scenario 分支）
+        mm._baseline_mode = {
+            "coskill": "procedural_skill",
+            "compact_memory": "compress",
+            "continuity": "associated_forget",
+        }.get(group, None)
         return mm
 
     def _execute_tool(self, tool: str, args: dict, ctx: dict) -> bool:
@@ -176,19 +190,26 @@ class RealAgentHarness:
 
     def run_scenario(self, group: str, seed: int, scenario: dict[str, Any]) -> AgentRunResult:
         """在单个 DAG 任务上运行一次 agent（真实执行）。"""
-        rng = random.Random(seed * 1000 + hash(scenario["task_id"]) % 1000)
+        # 确定性种子：内置 hash() 对 str 有进程随机化（PYTHONHASHSEED），
+        # 会破坏可复现性；改用 hashlib 稳定哈希（同一 task_id 恒同种子）
+        _tid_hash = int(hashlib.sha256(scenario["task_id"].encode()).hexdigest()[:8], 16) % 1000
+        rng = random.Random(seed * 1000 + _tid_hash)
         ctx = {"_rng": rng, "real_io": self.real_io, "agent_id": f"agent_{seed}", "step": 0}
 
         # 记忆系统
         mm = self._new_memory(group, seed)
 
         # 安全协商器（按组别）
+        # full / abl_noForget：有轻量协商（full 联合、abl_noForget 只协商）
+        # abl_noNegot：无协商（直通执行）
+        # 三个参考臂（coskill / compact_memory / continuity）：**无协商**，
+        #   只保留单一记忆机制——它们是单一机制参照，不含安全协商组件
         if group in ("full", "abl_noForget"):
             negotiator = LightweightSecurityNegotiator(SecurityPolicy())
         elif group in ("abl_noNegot",):
             negotiator = None  # 无协商（直通执行）
         elif group in ("coskill", "compact_memory", "continuity"):
-            negotiator = LightweightSecurityNegotiator(SecurityPolicy())
+            negotiator = None  # 单一记忆机制参照：无协商
         else:
             negotiator = LightweightSecurityNegotiator(SecurityPolicy())
 
@@ -261,13 +282,31 @@ class RealAgentHarness:
             exec_ok = self._execute_tool(tool, args, ctx)
             exec_fail_rate = self.tool_fail_rate
 
-            # 记忆收益：如果记忆系统启用且记忆命中，降低失败率
-            # abl_noForget 也有记忆系统（只增不忘，保留全部记忆）——唯一差异是不触发遗忘
+            # 记忆收益：由**真实记忆状态**驱动，随有效记忆数量增长（记忆多→检索面大→收益大）。
+            # 记忆机制差异经真实 mm.get_stats / mm.search 传导：
+            #   - compact_memory：压缩→记忆数少→收益小
+            #   - abl_noForget：只增不忘→记忆数最多→收益大
+            #   - coskill：procedural 技能记忆→额外技能收益
+            #   - continuity：关联保留→记忆数居中→收益中等
             if group in ("full", "abl_noNegot", "abl_noForget", "coskill", "compact_memory", "continuity"):
-                # 检索相关记忆（用任务上下文模拟）
-                mem_hit_probe = rng.random()
-                if mem_hit_probe < self.base_mem_hit_rate + (0.2 if group == "full" else 0.05):
-                    exec_fail_rate -= self.mem_benefit
+                try:
+                    stats = mm.get_stats()
+                    mem_count = stats.get("total_long_term", 0) or 0
+                except Exception:
+                    mem_count = 0
+                # 收益随记忆数饱和（>=8 条记忆给满额 mem_benefit）
+                mem_coverage = min(1.0, mem_count / 8.0)
+                if mem_coverage > 0:
+                    exec_fail_rate -= self.mem_benefit * mem_coverage
+                # coskill：procedural 技能记忆额外收益（协作技能共享，真实检索）
+                if getattr(mm, "_baseline_mode", None) == "procedural_skill":
+                    try:
+                        skill_hit = mm.search_procedural_only(
+                            f"task {scenario['task_id']} skill", top_k=1)
+                        if skill_hit:
+                            exec_fail_rate -= self.negotiation_benefit  # 技能收益（复用协商量级）
+                    except Exception:
+                        pass
 
             # 协商收益：如果协商成功，降低失败率
             if negotiator is not None and negot_result and negot_result.decision in ("allow", "degrade"):
@@ -299,9 +338,32 @@ class RealAgentHarness:
                 if hit:
                     mem_hits += 1
 
+                # --- 参考臂机制差异化（真实记忆组件，非硬编码） ---
+                mode = getattr(mm, "_baseline_mode", None)
+                if mode == "procedural_skill":
+                    # coskill：写 procedural 技能记忆 + 检索技能（协作技能共享）
+                    skill_content = f"skill_{tool}_step{step}"
+                    mm.add_procedural(skill_content, importance=importance,
+                                      metadata={"step": step, "task": scenario["task_id"]})
+                    skill_hit = mm.search_procedural_only(
+                        f"task {scenario['task_id']} skill {tool}", top_k=1)
+                    # 技能命中仅当语义未命中时补记一次（保证 mem_hit_rate <= 1）
+                    if skill_hit and not hit:
+                        mem_hits += 1
+                elif mode == "compress":
+                    # compact_memory：每 2 步触发语义记忆压缩（MockLLMConsolidator）
+                    if step > 0 and step % 2 == 0:
+                        try:
+                            mm.consolidate_memories(memory_type="semantic",
+                                                    topic=f"task {scenario['task_id']}")
+                        except Exception:
+                            pass
+                # continuity 的关联遗忘在遗忘阶段处理（forget() 内含 forget_with_associates）
+
         # 组别特有：遗忘触发
         forget_calls = 0
         conflict_detected = 0
+        mode = getattr(mm, "_baseline_mode", None)
         if group in ("full", "abl_noNegot"):
             # Full/abl_noNegot：记忆-遗忘启用，触发遗忘
             forget_result = mm.forget()
@@ -313,6 +375,28 @@ class RealAgentHarness:
             # 只增不忘：不触发遗忘
             forget_calls = 0
             conflict_detected = len(mm.detect_conflicts())
+        elif mode == "associated_forget":
+            # continuity：关联遗忘保留——forget() 内经 forget_with_associates 处理关联链，
+            # 且遗忘前提升关联记忆重要性（保护连续性，真实机制）
+            try:
+                sem_store = mm.semantic
+                if hasattr(sem_store, "list_all"):
+                    mems = sem_store.list_all()
+                    for m in mems:
+                        if m.importance < 0.5:
+                            mm.update_memory("semantic", m.id, importance=min(1.0, m.importance + 0.15))
+            except Exception:
+                pass
+            forget_result = mm.forget()
+            forget_calls = sum(len(v) for v in forget_result.values()) if forget_result else 0
+            conflicts = mm.detect_conflicts()
+            conflict_detected = len(conflicts)
+        elif mode in ("compress", "procedural_skill"):
+            # compact_memory / coskill：也触发遗忘（压缩/技能后保留高价值记忆）
+            forget_result = mm.forget()
+            forget_calls = sum(len(v) for v in forget_result.values()) if forget_result else 0
+            conflicts = mm.detect_conflicts()
+            conflict_detected = len(conflicts)
 
         # 计算记忆命中率
         mem_hit_rate = mem_hits / max(1, total_tools)
