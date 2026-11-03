@@ -57,3 +57,21 @@ P6 正式实验需要：① 多智能体协作任务（12 场景）② 记忆-�
 **C1 闭合需要构造真实数据管道**：设计多智能体协作任务 + 安全协商模块 + 真实运行 agent 采集轨迹（独立工作项，4-6 周）。
 
 > 本仓不空跑合成数据冒充正式实验——这是科研诚信要求。正式运行启动需 C1-C4 闭合 + 用户确认。
+
+## C1 进展（2026-11-03 更新）
+
+**管道已打通 + 冒烟证据落盘；C1 仍需正式标定才能闭合。**
+
+- `engineering/real-pipeline/run_mini_free_pilot.py`（新增）：在真实 DAG 任务上运行
+  真实 LLM agent（Magpie `opencode-zen-free/deepseek-v4.1-flash-free`，工具调用），
+  集成真实 `MemoryManager.search` 检索 + `LightweightSecurityNegotiator` 协商，
+  采集真实轨迹（`synthetic=false, calibration=true`）。RED/GREEN selftest 全过。
+- `engineering/real-pipeline/evidence/trace_T08_full_seed0_smoke.json`（新增）：
+  真实轨迹冒烟（T08，2 节点，mem_hits=1，neg=allow）。`preregister_real_run.py --check`
+  已把 C1 识别为 `ok=true`（存在 synthetic=false 证据）。
+- **诚实限制**：这是**冒烟级证据**（1 条轨迹，无 baseline 对照），可证明管道工作，
+  但不足以估计 4 个标定常数（tool_fail_rate/mem_benefit/negotiation_benefit/
+  base_mem_hit_rate）。C1 正式闭合需多臂对比标定。
+- **免费通道容量**：`opencode-zen-free` 实测约 35k token/日触发 429；微型 pilot
+  （6 任务×1 seed×3 臂=18 轨迹）需约 47.5 万 token（~1100/节点含 reasoning）。
+  **免费通道单日无法完成微型 pilot**，需分批/额度内通道/付费授权。
