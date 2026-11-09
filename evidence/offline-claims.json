@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "status": "WORK-IN-PROGRESS",
+  "what_this_file_is": "Single source for the offline suite counts. scripts/check_claim_drift.py re-runs the commands and requires the live surfaces below to repeat the phrases built from these integers. It is not a research result.",
+  "pytest_passed": 112,
+  "pytest_cwd": "engineering/memory-system",
+  "pytest_args": ["tests/", "-q", "--tb=no"],
+  "forgetting_js_assertions_passed": 103,
+  "forgetting_js_assertions_failed": 0,
+  "forgetting_js_cwd": "engineering/memory-system/forgetting-js",
+  "forgetting_js_script": "test/forgetting.test.mjs",
+  "live_surfaces": [
+    {
+      "path": "README.md",
+      "must_contain": [
+        "pytest passed: {pytest}",
+        "forgetting-js assertions: {js}",
+        "N=72 is a power calculation, not a run",
+        "not published"
+      ]
+    },
+    {
+      "path": "STATUS.md",
+      "must_contain": [
+        "STATUS: WORK-IN-PROGRESS",
+        "pytest passed: {pytest}",
+        "forgetting-js assertions: {js}"
+      ]
+    },
+    {
+      "path": "FAILURE_MODES.md",
+      "must_contain": [
+        "pytest passed: {pytest}",
+        "forgetting-js assertions: {js}"
+      ]
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "must_contain": [
+        "pytest passed: {pytest}",
+        "forgetting-js assertions: {js}"
+      ]
+    },
+    {
+      "path": "engineering/memory-system/README.md",
+      "must_contain": [
+        "pytest passed: {pytest}"
+      ]
+    },
+    {
+      "path": "engineering/memory-system/forgetting-js/README.md",
+      "must_contain": [
+        "forgetting-js assertions: {js}",
+        "not published"
+      ]
+    }
+  ]
+}

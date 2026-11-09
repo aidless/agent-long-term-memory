@@ -1,6 +1,8 @@
 # Agent 长期记忆系统
 
-为 AI Agent 提供持久化的长期记忆能力，支持记忆的存储、检索、遗忘和整合。
+> **Prototype in this clone.** From this directory, `python3 -m pytest tests/ -q` is the offline check (`pytest passed: 112`). That phrase is the unit-test suite, not a long-horizon agent result. Repository status: [`../../STATUS.md`](../../STATUS.md). Failure modes: [`../../FAILURE_MODES.md`](../../FAILURE_MODES.md). The tree below is this directory; an older heading called the root `18-agent-long-term-memory`.
+
+为 AI Agent 提供持久化的长期记忆能力，支持记忆的存储、检索、遗忘和整合。原型代码，不是三判断的实证。
 
 ## 架构设计
 
@@ -38,7 +40,7 @@
 ## 项目结构
 
 ```
-18-agent-long-term-memory/
+engineering/memory-system/          # this directory (older notes said 18-agent-long-term-memory)
 ├── app/                    # FastAPI 应用层
 │   ├── api/                # API 路由
 │   │   ├── memory.py       # 记忆 CRUD
@@ -84,7 +86,8 @@ pip install -r requirements.txt
 ### 运行测试
 
 ```bash
-pytest tests/ -v
+python3 -m pytest tests/ -q
+# pytest passed: 112
 ```
 
 ### 启动服务

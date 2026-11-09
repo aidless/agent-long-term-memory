@@ -1,4 +1,8 @@
+<!-- COUNT-HISTORICAL: suite counts below are a point-in-time note, not the live count. Live count: evidence/offline-claims.json -->
+
 # v5 交付报告：证据加权收缩（evidence-weighted usage shrink）
+
+> **Version snapshot.** "82 PASS" is this version's note, not the live suite. Live count: `evidence/offline-claims.json`. `evolve-memory.js` is not in this clone.
 
 > 2026-11-01 · 开源仓库 `forgetting-js` · 82 PASS / 0 FAIL · commit `2e3ae9e`
 

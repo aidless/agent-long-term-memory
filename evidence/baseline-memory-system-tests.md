@@ -1,4 +1,8 @@
+<!-- COUNT-HISTORICAL: suite counts below are a point-in-time note, not the live count. Live count: evidence/offline-claims.json -->
+
 # memory-system 基线测试验证
+
+> **Historical snapshot (2026-11-01).** The "77 passed" lines record the suite that day. They are not the live count. The live count is `evidence/offline-claims.json`, checked by `scripts/check_claim_drift.py`.
 
 > 日期：2026-11-01
 > 环境：Python 3.12.3，fastapi/numpy/sklearn/pytest 已装

@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-"""真实 agent 任务运行框架（Real Data Pipeline）
+"""Harness sketch for driving MemoryManager from an external DAG directory.
 
-P6 正式实验需要「真实数据管道」：在真实多智能体协作任务上运行 agent，
-用 MemoryManager（记忆-遗忘） + LightweightSecurityNegotiator（安全协商）采集真实轨迹。
+This file is not evidence of a study. No output is committed in this clone.
+The default DAG directory is outside the repository (EXTERNAL_DAG_DIR below).
+`parents[3]` is the directory that contains this repository, not the repository root.
 
-本框架：
-1. 任务源：multiagent_scaling 的 DAG 规格（144 个真实任务，9 工具，L-low/L-high 层）
-2. 记忆-遗忘：MemoryManager（真实记忆系统，含冲突检测/关联遗忘/校准）
-3. 安全协商：LightweightSecurityNegotiator（轻量） vs FullSecurityBaseline（完整基线）
-4. 组别：Full / Abl-noForget / Abl-noNegot / CoSkill / Compact-Memory / CONTINUITY（6 组）
-
-关键：本框架**真实运行**（非合成）——任务来自 DAG 规格，agent 实际执行工具调用，
-记忆由 MemoryManager 真实存取，安全协商由协商器真实决策。
+If a caller passes a directory and the process writes JSON, `synthetic: false`
+means this script did not use the P6 synthetic generator. It does not mean a
+formal P6 run happened, and it does not mean the tasks were agent trajectories
+collected for that preregistration. N=72 is not produced here.
 """
 
 import hashlib
@@ -35,11 +32,16 @@ from security_negotiation import (  # noqa: E402
     SecurityPolicy,
 )
 
-# 工作区根（含字面反斜杠路径）——通过 DAG 目录显式传入，不做相对上溯
-_WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
+# EXTERNAL PATH, not vendored in this clone.
+# parents[0] = engineering/real-pipeline
+# parents[1] = engineering
+# parents[2] = repository root
+# parents[3] = directory that contains the repository (not the repository)
+_REPO_PARENT = Path(__file__).resolve().parents[3]
+EXTERNAL_DAG_DIR = _REPO_PARENT / "papers" / "multiagent_scaling" / "results" / "dag_specs"
 
-# 真实遗忘配置：容量限制 + 短半衰期（使遗忘真实触发，非装饰）
-# 记忆数 > capacity 时淘汰保留分数最低者——真实记忆-遗忘语义
+# ForgetConfig this harness would use if executed. Not evidence of a run.
+# When memory count exceeds capacity, the lowest retention score is dropped.
 REAL_FORGET_CONFIG = ForgetConfig(
     max_capacity=8,          # 容量限制：>8 条淘汰最低分
     decay_half_life=3600.0,  # 1 小时半衰期（实验尺度内）
@@ -52,10 +54,19 @@ REAL_FORGET_CONFIG = ForgetConfig(
 # ==================== 任务源（DAG 规格） ====================
 
 def load_dag_tasks(dag_dir: str) -> list[dict[str, Any]]:
-    """从 multiagent_scaling 加载 DAG 任务规格（真实任务）。"""
+    """Load JSON task specs from a caller-supplied directory.
+
+    The directory is not part of this clone. A missing path raises
+    FileNotFoundError. Loading files is not a record that they are real
+    agent trajectories.
+    """
     dag_path = Path(dag_dir)
     if not dag_path.exists():
-        raise FileNotFoundError(f"DAG 目录不存在: {dag_path}")
+        raise FileNotFoundError(
+            "DAG directory is not in this clone and was not found: "
+            f"{dag_path}. Default EXTERNAL_DAG_DIR is outside the repository. "
+            "A missing directory is not a study result."
+        )
     tasks = []
     for f in sorted(dag_path.glob("*.json")):
         d = json.loads(f.read_text(encoding="utf-8"))
@@ -400,13 +411,15 @@ def run_real_pipeline(dag_dir: str, seeds: list[int] = None, scenarios: list[dic
                     for r in group_results
                 ],
                 "config": {
-                    "dataset": "multiagent-scaling DAG 真实任务集 v1-real-dag-20261102",
-                    "dataset_spec": "papers/multiagent_scaling/results/dag_specs/",
+                    "dataset": "caller-supplied DAG directory; default path is outside this clone",
+                    "dataset_spec": "EXTERNAL: <parent-of-repo>/papers/multiagent_scaling/results/dag_specs/",
+                    "dataset_in_this_clone": False,
                     "groups": GROUPS,
                     "seeds": seeds,
                     "synthetic": False,
                     "pilot": False,
                     "h3_delta": 0.05,
+                    "evidence_status": "script output only; not a recorded run in agent-long-term-memory; not a P6 N=72 run",
                 },
             }
             (Path(out_dir) / f"{group}_seed{seed}.json").write_text(
@@ -421,15 +434,16 @@ def run_real_pipeline(dag_dir: str, seeds: list[int] = None, scenarios: list[dic
         "scenarios_per_cell": len(scenarios),
         "synthetic": False,
         "pilot": False,
-        "note": "真实 DAG 任务源 + 真实 MemoryManager + 真实安全协商",
+        "note": "script output only; dataset path is external to this clone; not a P6 run",
+        "evidence_status": "not a recorded run in this clone",
     }
     return rec
 
 
 if __name__ == "__main__":
-    # 默认：运行真实数据管道（12 场景 × 3 seeds × 6 组 = 216 cells）
-    # DAG 目录默认在工作区根 papers/multiagent_scaling/results/dag_specs
-    dag_dir = sys.argv[1] if len(sys.argv) > 1 else str(_WORKSPACE_ROOT / "papers" / "multiagent_scaling" / "results" / "dag_specs")
+    # Default input is EXTERNAL_DAG_DIR (outside this clone). Passing a
+    # directory does not turn the process into a finished P6 study.
+    dag_dir = sys.argv[1] if len(sys.argv) > 1 else str(EXTERNAL_DAG_DIR)
     out_dir = sys.argv[2] if len(sys.argv) > 2 else "results/per_seed"
     rec = run_real_pipeline(dag_dir, out_dir=out_dir)
     print(json.dumps(rec, ensure_ascii=False, indent=2))

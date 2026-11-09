@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """轻量安全协商模块（Lightweight Security Negotiation）
 
-P6 正式实验需要「轻量安全协商」组件。本模块实现一个轻量级安全协商协议：
+Sketch of a negotiation helper that a future P6 run would need.
+This module is not a P6 result. N=72 has not been run. The
+`violation_threshold` below is a local default, not a frozen prereg bound.
+
+本模块实现一个轻量级安全协商协议：
 - 每个工具调用前检查是否触发安全策略（敏感操作/越权访问/数据泄露风险）
 - 协商决策：允许（allow）/ 拒绝（deny）/ 降级（degrade）三态
 - 开销度量：每次协商的 token 数（用于 H3 成本比较）

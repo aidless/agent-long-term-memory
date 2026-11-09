@@ -1,5 +1,7 @@
 # 判断①：长程自主性的失败率连乘衰减
 
+> **STATUS: WORK-IN-PROGRESS.** Scripts in `experiments/` are mechanical simulators. A run does not establish this judgment on real agents. P6 is a draft; N=72 is a power calculation, not a run. Sister-repo rows are not in this clone and were not checked from here. See `/STATUS.md` and `/FAILURE_MODES.md`.
+
 > **核心判断**：多步工具调用、跨天自主、错误复合——每一步都有失败率，连乘起来指数级衰减。这是 agent 落地最卡的环节。
 
 ## 定义
@@ -27,10 +29,10 @@
 
 | 证据 | 来源 | 状态 |
 |---|---|---|
-| agent 可靠性/循环安全 | `agent-loop-safety`（独立仓库） | 已成熟，引用 |
-| agent 可核查性 | `agent-verifiability`（独立仓库） | 已成熟，引用 |
-| 短链→长链外推 | `agi-research-program/P4`（R²≈0.00-0.03） | 已落盘，引用 |
-| 长程记忆/遗忘 | `agi-research-program/P6`（N=72 对预注册） | 已落盘，引用 |
+| agent 可靠性/循环安全 | `agent-loop-safety`（独立仓库） | not in this clone; not checked here |
+| agent 可核查性 | `agent-verifiability`（独立仓库） | not in this clone; not checked here |
+| 短链→长链外推 | `agi-research-program/P4`（R²≈0.00-0.03） | not in this clone; figure not recomputable here |
+| 长程记忆/遗忘 | `agi-research-program/P6` | draft outside this clone; N=36 synthetic pilot inconclusive; N=72 is a power calculation, not a run |
 
 ## 文献锚点（已验真，见 `../../refs/2026-11-01-verified-literature.md`）
 
@@ -53,13 +55,13 @@
 - **R1.2 错误复合模型**：设计实验分离「独立失败」与「复合失败」（错误污染后续步骤）。
 - **R1.3 记忆支撑长程**：对照「有/无长期记忆系统」的长程任务完成率（衔接 P6 预注册）。
 
-> **R1.1 已完成**（2026-11-01）：`experiments/r1_1_reliability_curve.py` 实测 k=10/20/50/100 完成率，拟合理论 p^k 得 **R²=0.999976**（|Δ|<0.005），**验证判断①的 p^k 指数衰减**。证据 `evidence/2026-11-01-r1_1-reliability-curve.json`。
-> **R1.2 已完成**（2026-11-01）：`experiments/r1_2_error_compound.py` 公平对照（相同完成判据「错误数≤θ」）验证**错误复合比简单连乘更坏**——错误传播使错误计数过度分散（k=50 时复合分散 9.0 vs 独立 0.98，泊松基准=1），θ=1 时完成率从独立 0.7426 降到复合 0.5003（惩罚 -0.2423）。公平性对照 θ=0 时独立=复合=p^k，验证对照有效。证据 `evidence/2026-11-01-r1_2-error-compound.json`。
-> **R1.3 已完成**（2026-11-01）：`experiments/r1_3_memory_benefit.py` 机械对照（无记忆仅上下文窗口 vs 有记忆长期系统）验证**记忆帮助长程（当上下文不足）但也可能损害（当上下文足够）**——k=20 时记忆收益 +0.375（上下文 C=5 不足）；C=20≥k 时记忆反而 -0.625（上下文已足够，记忆引入检索错误）。污染敏感性：记忆污染 0.10 时收益从 +0.375 降到 +0.049。**呼应文献[1] 发现 (5)**。证据 `evidence/2026-11-01-r1_3-memory-benefit.json`。
+> **R1.1 脚本已落盘（非实证）**（2026-11-01）：`experiments/r1_1_reliability_curve.py` 实测 k=10/20/50/100 完成率，拟合理论 p^k 得 **R²=0.999976**（|Δ|<0.005），**验证判断①的 p^k 指数衰减**。证据 `evidence/2026-11-01-r1_1-reliability-curve.json`。
+> **R1.2 脚本已落盘（非实证）**（2026-11-01）：`experiments/r1_2_error_compound.py` 公平对照（相同完成判据「错误数≤θ」）验证**错误复合比简单连乘更坏**——错误传播使错误计数过度分散（k=50 时复合分散 9.0 vs 独立 0.98，泊松基准=1），θ=1 时完成率从独立 0.7426 降到复合 0.5003（惩罚 -0.2423）。公平性对照 θ=0 时独立=复合=p^k，验证对照有效。证据 `evidence/2026-11-01-r1_2-error-compound.json`。
+> **R1.3 脚本已落盘（非实证）**（2026-11-01）：`experiments/r1_3_memory_benefit.py` 机械对照（无记忆仅上下文窗口 vs 有记忆长期系统）验证**记忆帮助长程（当上下文不足）但也可能损害（当上下文足够）**——k=20 时记忆收益 +0.375（上下文 C=5 不足）；C=20≥k 时记忆反而 -0.625（上下文已足够，记忆引入检索错误）。污染敏感性：记忆污染 0.10 时收益从 +0.375 降到 +0.049。**呼应文献[1] 发现 (5)**。证据 `evidence/2026-11-01-r1_3-memory-benefit.json`。
 
 ## 关联
 
 - 工程轨 `engineering/memory-system`：长期记忆系统是支撑长程任务的关键组件。
 - P6 预注册：`../agi-research-program/prereg/P6-memory.md`（外部引用，不搬入）。
 
-> 本文件是研究框架（Phase 1），不含实验结论。所有数字可复算（$p^k$）。
+> 本文件是研究框架加模拟脚本笔记。下文「脚本已落盘」指 JSON 已写入，不是判断已被实证。$p^k$ 表可手算；模拟器输出不能当成 agent 实测。

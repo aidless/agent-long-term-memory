@@ -1,5 +1,7 @@
 # R2.3 记忆架构分类 — 分层/遗忘/整合策略设计空间
 
+> **Code, not a result.** 「已补全」in this file means the named module is in this clone and is part of the unit suite. The live count is `evidence/offline-claims.json`, not a number in this note. It does not mean judgment ② was measured on agents. See `/STATUS.md`.
+
 > **目标**：梳理长期记忆架构的设计空间，明确分层（情景/语义/程序/工作）、遗忘策略、整合策略的可选方案与权衡，作为工程轨的架构选型依据。
 >
 > **判断②关联**：检索≠记忆的关键在「自主性」。本分类聚焦记忆系统的**自主机制**——遗忘（何时忘）与整合（何时合并）——它们是超越纯检索的核心组件。
