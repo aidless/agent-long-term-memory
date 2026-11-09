@@ -1,4 +1,8 @@
+<!-- COUNT-HISTORICAL: suite counts below are a point-in-time note, not the live count. Live count: evidence/offline-claims.json -->
+
 # R2.3 剩余缺口补全：程序记忆陈化检测 + 重要性校准
+
+> **Historical snapshot (2026-11-01).** "12 passed" is the calibration file that day; the full-suite number in this file is not the live contract. Live count: `evidence/offline-claims.json`.
 
 > 2026-11-01 · 项目 agent-long-term-memory · R2.3 缺口 3/4
 

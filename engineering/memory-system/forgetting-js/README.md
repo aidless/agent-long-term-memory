@@ -26,6 +26,8 @@ v3 修复：`softForgetEligible` 检测到 soft_forgotten 但 v2 score ≥ 阈�
 
 ### 真实库验证
 
+> **Not in this clone.** The database behind the 44-active / 19-archived notes is not vendored. Plugin files named below (`patrol.js`) are not in this clone either. The offline check is `node test/forgetting.test.mjs` (`forgetting-js assertions: 103`) against the mock in `test/forgetting.test.mjs`. This folder is not published to npm or PyPI.
+
 真实库（44 active）：9 条 v1 误杀 reference 全部被 v3 识别为 restore 候选并恢复；
 插件 `patrol.js` 集成：v3 的 `restoreCandidates` 此前未被插件 patrol 应用（只应用
 `softForgetCandidates`），已补齐——patrol 现在调用 `memories.restoreSoftForgetRow`
@@ -188,8 +190,10 @@ const repo = {
 ## Install & test
 
 ```bash
-npm install
-npm test   # 82 assertions, pure-function + minimal-repo-mock
+node test/forgetting.test.mjs
+# forgetting-js assertions: 103
+# npm install is optional; package.json has no dependencies.
+# not published to npm or PyPI
 ```
 
 ## License
@@ -218,7 +222,7 @@ shrink       = useCount / (useCount + EVIDENCE_HALF)
 
 可行性边界（诚实声明）：dsh 有正信号（`use_count`，按 id 读取时触发）但无负信号
 （检索失败不记录），所以 Memory Worth 的「成功/失败比值」**不可落地**；本 v5 只落地
-「证据量」部分，不伪造失败信号。测试 82 PASS。
+「证据量」部分，不伪造失败信号。测试 82 PASS。 <!-- COUNT-HISTORICAL: v5 suite size, not the live count -->
 
 完整 v5 交付报告见 [docs/v5-evidence-shrink-report.md](docs/v5-evidence-shrink-report.md)。
 
@@ -267,7 +271,7 @@ W_REUSE=0.05 W_DRIFT=0.08  W_POTENTIAL=0.10
 
 ### 测试
 
-V14（生存势能 10 断言）+ V15（层级遗忘 8 断言），全套 **99 PASS / 0 FAIL**。
+V14（生存势能 10 断言）+ V15（层级遗忘 8 断言），全套 **99 PASS / 0 FAIL**。 <!-- COUNT-HISTORICAL: v6 suite size, not the live count -->
 
 完整 v6 交付报告见 [docs/v6-enhancement-report.md](docs/v6-enhancement-report.md)。
 

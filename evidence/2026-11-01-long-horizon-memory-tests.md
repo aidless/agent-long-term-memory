@@ -1,4 +1,8 @@
+<!-- COUNT-HISTORICAL: suite counts below are a point-in-time note, not the live count. Live count: evidence/offline-claims.json -->
+
 # 长程任务记忆支撑测试证据
+
+> **Historical snapshot.** Counts in this file, including an older "83" figure and a later full-suite number, are notes from 2026-11-01. The live count is `evidence/offline-claims.json`. The test names below include retrieval checks; see `FAILURE_MODES.md` before reading a pass as a memory benefit.
 
 > 日期：2026-11-01
 > 测试文件：`engineering/memory-system/tests/test_long_horizon.py`（6 个测试）

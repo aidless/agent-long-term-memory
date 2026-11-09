@@ -1,3 +1,9 @@
+# Live counts, re-checked by scripts/check_claim_drift.py:
+# pytest passed: 112
+# forgetting-js assertions: 103
+# Only this file is a GitHub Actions workflow. Paths under a nested
+# .github/ directory are not loaded.
+
 name: ci
 
 on:
@@ -24,13 +30,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
+          cache-dependency-path: engineering/memory-system/requirements.txt
 
-      # requirements.txt pins fastapi/pydantic/numpy/scikit-learn/pytest==7.4.3/httpx;
-      # 装它而不是 `pip install pytest`，保证 CI 与本机复现用的是同一份依赖集合。
       - name: Install pinned deps
         run: python -m pip install -r requirements.txt
 
-      # 在工程子目录里跑测试；测试计数会打到日志尾部（当前实测 112 passed）。
       - name: Run memory-system tests
         run: python -m pytest tests/ -q
 
@@ -39,3 +43,42 @@ jobs:
         env:
           CONSOLIDATOR_PROVIDER: keyword
           MEMORY_CORS_ORIGINS: ""
+
+  forgetting-js:
+    name: forgetting-js assertions (node 22)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: engineering/memory-system/forgetting-js
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No npm dependencies. npm install is intentionally not required.
+      - name: Run forgetting-js assertions
+        run: node test/forgetting.test.mjs
+
+  claim-drift:
+    name: offline claim drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engineering/memory-system/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned deps
+        run: python -m pip install -r engineering/memory-system/requirements.txt
+
+      - name: Re-run suites and compare documented counts
+        run: python scripts/check_claim_drift.py

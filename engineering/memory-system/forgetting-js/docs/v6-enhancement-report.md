@@ -1,4 +1,8 @@
+<!-- COUNT-HISTORICAL: suite counts below are a point-in-time note, not the live count. Live count: evidence/offline-claims.json -->
+
 # v6 增强报告：生存势能动态 + 层级非均匀遗忘
+
+> **Version snapshot.** "99 PASS" in this file is this version's note. Live count: `evidence/offline-claims.json`. The "真实库" section describes a database that is not in this clone.
 
 > 日期：2026-11-01
 > 版本：1.4.0

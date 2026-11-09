@@ -1,5 +1,7 @@
 # 预注册链登记（P6 复用）
 
+> **External path.** `agi-research-program/prereg/P6-memory.md` is not in this clone. N=72 below is the planned sample size and, where a power figure is discussed, a calculation — not a completed run. Pilot numbers that this file treats as inputs are transcribed; the raw rows are not here.
+
 > 本文件登记 P6 长期记忆预注册的引用，**不重复启动**——P6 正式实验（N=72 pairs）是独立日程（4-6 周），本仓只提供预实验（pilot）参数估计。
 
 ## P6 预注册引用

@@ -1,4 +1,8 @@
+<!-- COUNT-HISTORICAL: suite counts below are a point-in-time note, not the live count. Live count: evidence/offline-claims.json -->
+
 # v4 增强报告 — 选择性遗忘机制
+
+> **Version snapshot.** Assertion counts in this report are for that version. The live count is `evidence/offline-claims.json`. Section 5 records npm publish as not done (no token). That is still the case: this folder is not published.
 
 日期：2026-11-01 · 版本：1.1.0 → 1.2.0（待发布）· 测试：70 PASS / 0 FAIL
 

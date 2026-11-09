@@ -1,4 +1,8 @@
+<!-- COUNT-HISTORICAL: suite counts below are a point-in-time note, not the live count. Live count: evidence/offline-claims.json -->
+
 # v7 增强报告：语义冗余 gating + 层级概率遗忘
+
+> **Version snapshot.** Counts here belong to this version note. Live count: `evidence/offline-claims.json`.
 
 > 日期：2026-11-02
 > 版本：1.5.0

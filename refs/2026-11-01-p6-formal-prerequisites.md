@@ -1,5 +1,7 @@
 # P6 正式运行前置条件（阶段三）
 
+> **External paths.** Rows in the 来源 column (`dataset_spec.md`, `analysis_plan.md`, `protocol.md`, `P6-memory.md`, `WORKING_NOTES.md`, `analysis_p3.py`, `run_records/pilot-p2-20260907.json`) are not files in this clone. The pilot table is a transcription. It cannot be recomputed by cloning this repository. N=72 in the power section is a calculation, not a run. Preregistration status remains draft.
+
 > 本文件登记 P6 长期记忆预注册正式运行的前置条件。**当前 pilot（N=36，synthetic=true）不满足正式实验要求**——以下条件全部闭合后才能启动正式运行（N=72 pairs）。正式运行属于独立日程（4-6 周），本仓不空跑合成数据冒充正式实验。
 
 ## 前置条件清单（P6 正式运行）

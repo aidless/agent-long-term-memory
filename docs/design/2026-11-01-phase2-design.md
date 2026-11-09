@@ -1,6 +1,8 @@
 # 阶段二实验设计细化 — 冲突场景 / 长程任务 / 检索 vs 记忆
 
-> **目标**：在阶段一（R1.1-R3.3 实验验证 + 工程补全）基础上，细化三类实验设计，为预注册（P6 复用）与正式实验做准备。
+> **STATUS: WORK-IN-PROGRESS.** The "阶段一已确认的结论" list is simulator output, not a confirmed finding. See `/STATUS.md` and `/FAILURE_MODES.md`.
+
+> **目标**：在阶段一的模拟脚本和工程原型之上，细化三类实验设计，为仍是 draft 的 P6 预注册做准备。不把模拟输出当成已确认结论。
 >
 > **阶段一已确认的结论**（本设计的输入）：
 > - R1.2：错误复合比简单连乘更坏（k=50 惩罚 -0.2423，复合分散 9.0 vs 0.98）——错误传播使计数过度分散。
@@ -72,7 +74,7 @@
 
 ## 4. 预注册链（P6 复用）
 
-- P6 预注册：`agi-research-program/prereg/P6-memory.md`（72 pairs = 12 场景 × 6 seeds；N=60 功效 0.70，N=72≈0.80）。
+- P6 prereg text is the external path `agi-research-program/prereg/P6-memory.md` (not in this clone). The planned grid is 12 scenarios × 6 seeds = 72 pairs. N=60 power 0.70 and N=72 power ≈0.80 are power calculations, not a run.
 - **本仓登记**：`refs/` 或 `docs/` 下登记 P6 引用（不重复启动——P6 是独立日程）。
 - 阶段二实验（V2.1-V2.3）为**预实验（pilot）**：为 P6 正式实验提供参数估计（效应量、方差）。
 

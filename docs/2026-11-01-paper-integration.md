@@ -1,12 +1,10 @@
 # Agent Long-Term Memory: Three Judgments on Autonomy, Retrieval, and Self-Improvement
 
-> **Integration Draft** — consolidates Phase 1 (R1.1-R3.3) and Phase 2 (V2.1-V2.3) experimental findings.
-> Status: **draft** (research conclusions verified, not yet submitted to a venue).
-> All numbers traceable to evidence files in `evidence/` and `research/*/evidence/`.
+> **Not a paper. STATUS: WORK-IN-PROGRESS.** This file narrates simulator JSON in the voice of a study. That voice is a failure mode (`FAILURE_MODES.md`, synthetic pilot overclaim). The numbers are outputs of scripts under `research/*/experiments/`, not a completed empirical study and not a venue submission. Live unit-test counts are `pytest passed: 112` and `forgetting-js assertions: 103` in `evidence/offline-claims.json`. They do not verify the three judgments.
 
 ## Abstract
 
-Long-term memory is widely assumed to be a key enabler of agent autonomy, yet three judgments remain under-examined: (1) *long-horizon autonomy* — the failure-rate compounding that limits multi-step autonomy; (2) *memory vs. retrieval* — whether memory provides genuine benefits beyond retrieval; (3) *recursive self-improvement* — whether an agent can improve itself in a generalizable way. We conduct a systematic experimental study across these three judgments, with a purpose-built memory system as the engineering substrate. Our findings are: (1) task completion decays as $p^k$ (R²=0.999976), but error compounding makes it *worse* than independent multiplication (k=50 penalty -0.2423, dispersion 9.0 vs. 0.98); memory helps when context is insufficient (+0.375 at k=20) but *hurts* when context is sufficient (-0.625 at C=20). (2) Memory provides genuine, robust benefits over retrieval in fuzzy-query scenarios (M=1.000), and the benefit is entirely robust to noise (all 5 noise levels M=1.000) — but *vanishes* when retrieval quality is high (M=0.000). (3) Recursive self-improvement has not been achieved: evaluator capture is a hard barrier (score +0.345 but held-out +0.01, p=0.918), while outer-loop self-reference via memory does work (+0.237, exceeding external injection +0.144). We contribute a verified memory system (110 tests passing) that implements conflict detection, associative forgetting, and staleness calibration, plus a design-space taxonomy for memory architectures.
+Long-term memory is widely assumed to be a key enabler of agent autonomy, yet three judgments remain under-examined: (1) *long-horizon autonomy* — the failure-rate compounding that limits multi-step autonomy; (2) *memory vs. retrieval* — whether memory provides genuine benefits beyond retrieval; (3) *recursive self-improvement* — whether an agent can improve itself in a generalizable way. The paragraphs below narrate simulator outputs in the voice of a study. They are not a study. The figures, copied from those scripts, are: (1) task completion decays as $p^k$ (R²=0.999976), but error compounding makes it *worse* than independent multiplication (k=50 penalty -0.2423, dispersion 9.0 vs. 0.98); memory helps when context is insufficient (+0.375 at k=20) but *hurts* when context is sufficient (-0.625 at C=20). (2) Memory provides genuine, robust benefits over retrieval in fuzzy-query scenarios (M=1.000), and the benefit is entirely robust to noise (all 5 noise levels M=1.000) — but *vanishes* when retrieval quality is high (M=0.000). (3) Recursive self-improvement has not been achieved: evaluator capture is a hard barrier (score +0.345 but held-out +0.01, p=0.918), while outer-loop self-reference via memory does work (+0.237, exceeding external injection +0.144). The in-repo prototype has unit tests. The live count is `pytest passed: 112` and `forgetting-js assertions: 103` (`evidence/offline-claims.json`). Those tests do not establish the three judgments. The prototype implements conflict detection, associative forgetting, and staleness calibration, plus a design-space taxonomy for memory architectures.
 
 ## 1. Introduction
 
@@ -92,7 +90,7 @@ $M=1.000$ indicates genuine memory; $M \approx 0$ indicates pure retrieval. For 
 - **Associative forgetting**: cascade forgetting for low-importance, disconnect-retain for high-importance.
 - **Staleness calibration**: procedural staleness + importance calibration.
 - **Integration**: `add_*` auto-conflict-check, `consolidate_memories` post-consolidation check, `forget` triggers associative forgetting.
-- **Tests**: 112 passed (Python) + 103 passed (JS).
+- **Tests**: unit suites only, live phrases `pytest passed: 112` and `forgetting-js assertions: 103`. Not a long-horizon evaluation.
 
 ## 5. Discussion
 
@@ -116,7 +114,7 @@ Outer-loop self-reference works (+0.237), but score-based self-improvement is un
 
 ## 7. Reproducibility
 
-All experiments are runnable via `research/*/experiments/*.py`. Evidence files are in `evidence/` and `research/*/evidence/`. See `refs/2026-11-01-verified-literature.md` for literature verification.
+Scripts under `research/*/experiments/` can be re-run as simulators. Their JSON is in `evidence/` and `research/*/evidence/`. Re-running them does not create an agent study. `refs/2026-11-01-verified-literature.md` is a bibliography note, not a result of this file.
 
 ## References
 
