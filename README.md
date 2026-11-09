@@ -4,6 +4,8 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+> **English TL;DR**: A research-plus-engineering repository on agent long-term memory, organized around three judgments: long-horizon autonomy fails by multiplicative decay, retrieval is not memory, and general recursive self-improvement remains unachieved. Engineering baseline: install the memory-system prototype and run `pytest tests/ -q` (112 passed); a parallel JS forgetting module carries 103 assertions. Findings are backed by recalculable `evidence/` artifacts, while the P6 preregistration is explicitly still a draft with an inconclusive synthetic pilot.
+
 **智能体长期记忆工程仓** — 研究「智能体与长期记忆」方向，从三大关键判断出发，走向可运行的工程系统。
 
 ## 方向定位
