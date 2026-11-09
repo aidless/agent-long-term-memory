@@ -1,5 +1,7 @@
 # agent-long-term-memory
 
+[![CI](https://github.com/aidless/agent-long-term-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/aidless/agent-long-term-memory/actions/workflows/ci.yml)
+
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **智能体长期记忆工程仓** — 研究「智能体与长期记忆」方向，从三大关键判断出发，走向可运行的工程系统。
