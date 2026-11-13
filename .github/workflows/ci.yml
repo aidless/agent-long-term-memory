@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  memory-system-tests:
+    name: memory-system tests (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    defaults:
+      run:
+        working-directory: engineering/memory-system
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      # requirements.txt pins fastapi/pydantic/numpy/scikit-learn/pytest==7.4.3/httpx;
+      # 装它而不是 `pip install pytest`，保证 CI 与本机复现用的是同一份依赖集合。
+      - name: Install pinned deps
+        run: python -m pip install -r requirements.txt
+
+      # 在工程子目录里跑测试；测试计数会打到日志尾部（当前实测 112 passed）。
+      - name: Run memory-system tests
+        run: python -m pytest tests/ -q
+
+      - name: Smoke-run the API app (import only; no external calls)
+        run: python -c "import app.main; print('app.main imports cleanly')"
+        env:
+          CONSOLIDATOR_PROVIDER: keyword
+          MEMORY_CORS_ORIGINS: ""

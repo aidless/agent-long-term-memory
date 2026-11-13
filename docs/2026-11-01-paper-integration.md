@@ -92,7 +92,7 @@ $M=1.000$ indicates genuine memory; $M \approx 0$ indicates pure retrieval. For 
 - **Associative forgetting**: cascade forgetting for low-importance, disconnect-retain for high-importance.
 - **Staleness calibration**: procedural staleness + importance calibration.
 - **Integration**: `add_*` auto-conflict-check, `consolidate_memories` post-consolidation check, `forget` triggers associative forgetting.
-- **Tests**: 110 passed (Python) + 103 passed (JS).
+- **Tests**: 112 passed (Python) + 103 passed (JS).
 
 ## 5. Discussion
 

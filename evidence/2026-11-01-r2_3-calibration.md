@@ -42,12 +42,12 @@
 ## 结果
 
 - `test_calibration.py`：**12 passed**
-- 全套件：**110 passed**（原 98 + 新 12），无回归
+- 全套件：**112 passed**（原 98 + 新 12 + 后续新增 2），无回归
 
 ## 复现
 
 ```bash
 cd engineering/memory-system
 python3 -m pytest tests/test_calibration.py -v   # 12 passed
-python3 -m pytest tests/                          # 110 passed
+python3 -m pytest tests/                          # 112 passed
 ```
