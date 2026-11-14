@@ -1,0 +1,129 @@
+{
+ "total": 20,
+ "passed": 20,
+ "failed": 0,
+ "selftest": false,
+ "failed_by_axis": {},
+ "results": [
+  {
+   "id": "api-01-stats-count",
+   "axis": "api-core",
+   "ok": true,
+   "detail": "1"
+  },
+  {
+   "id": "api-02-search-top1",
+   "axis": "api-core",
+   "ok": true,
+   "detail": "Python 是一种编程语言"
+  },
+  {
+   "id": "api-03-working-context",
+   "axis": "api-core",
+   "ok": true,
+   "detail": "- 临时上下文"
+  },
+  {
+   "id": "ret-01-time-decay-half-life",
+   "axis": "retrieval",
+   "ok": true,
+   "detail": "0.5"
+  },
+  {
+   "id": "ret-02-importance-score",
+   "axis": "retrieval",
+   "ok": true,
+   "detail": "0.6200000000000001"
+  },
+  {
+   "id": "ret-03-hybrid-weights",
+   "axis": "retrieval",
+   "ok": true,
+   "detail": "0.0"
+  },
+  {
+   "id": "proc-01-success-rate",
+   "axis": "procedural",
+   "ok": true,
+   "detail": "0.75"
+  },
+  {
+   "id": "proc-02-staleness",
+   "axis": "procedural",
+   "ok": true,
+   "detail": "True"
+  },
+  {
+   "id": "proc-03-calibrate-base",
+   "axis": "procedural",
+   "ok": true,
+   "detail": "0.25"
+  },
+  {
+   "id": "fg-01-retention-clip",
+   "axis": "forgetting",
+   "ok": true,
+   "detail": "1.0"
+  },
+  {
+   "id": "fg-02-should-forget",
+   "axis": "forgetting",
+   "ok": true,
+   "detail": "True"
+  },
+  {
+   "id": "fg-03-capacity-evict",
+   "axis": "forgetting",
+   "ok": true,
+   "detail": "old"
+  },
+  {
+   "id": "conflict-01-detect",
+   "axis": "conflict",
+   "ok": true,
+   "detail": "True"
+  },
+  {
+   "id": "conflict-02-count",
+   "axis": "conflict",
+   "ok": true,
+   "detail": "1"
+  },
+  {
+   "id": "conflict-03-resolve-keeps-high",
+   "axis": "conflict",
+   "ok": true,
+   "detail": "model_a 性能提升显著"
+  },
+  {
+   "id": "ev-01-reliability-recompute",
+   "axis": "evidence",
+   "ok": true,
+   "detail": "True"
+  },
+  {
+   "id": "ev-02-compound-penalty",
+   "axis": "evidence",
+   "ok": true,
+   "detail": "True"
+  },
+  {
+   "id": "ev-03-e2e-benefit",
+   "axis": "evidence",
+   "ok": true,
+   "detail": "0.6925"
+  },
+  {
+   "id": "doc-01-design-gap",
+   "axis": "doc",
+   "ok": true,
+   "detail": "冲突检测"
+  },
+  {
+   "id": "doc-02-readme-r22",
+   "axis": "doc",
+   "ok": true,
+   "detail": "R2.2 memory benchmark"
+  }
+ ]
+}

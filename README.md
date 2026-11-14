@@ -172,6 +172,50 @@ under `evidence/`. Design documents: `docs/design/2026-11-01-design.md` and
 `docs/design/2026-11-01-phase2-design.md`. Engineering verification is the two Quickstart
 commands above (pytest + npm test), both re-run clean on 2026-11-10.
 
+## 验收标准与复算
+
+本仓判为合格的条件是 `python3 eval/run_cases.py` 通过率必须为 100%（20/20），且 `make eval` 退出码必须为 0；任何一条失败即判为不合格。
+
+### 题库（`eval/cases.jsonl`，20 条，七键 `id/axis/question/expected/mode/verify/source`）
+
+| axis | 条数 | 判什么 | 期望值来源 |
+|---|---|---|---|
+| api-core | 3 | MemoryManager 写入计数、混合检索 top-1、工作记忆上下文窗口 | 真跑 `engineering/memory-system/manager/memory_manager.py`、`memory/working.py` |
+| retrieval | 3 | 时间衰减半衰期、重要性评分、混合检索权重恒等式 | 真跑 `retrieval/time_decay.py`、`retrieval/importance.py`、`retrieval/hybrid.py` |
+| procedural | 3 | 技能成功率、陈化判定、重要性校准基准项 | 真跑 `memory/procedural.py`、`manager/calibration.py` |
+| forgetting | 3 | 保留分数截断、衰减遗忘判定、容量淘汰选择 | 真跑 `manager/forgetter.py` |
+| conflict | 3 | 冲突检测、冲突对数、保留高重要性者 | 真跑 `manager/conflict.py` |
+| evidence | 3 | 从 evidence JSON 复算 p^k、复合惩罚、E2E 记忆收益 | 真解析 `evidence/2026-11-01-r1_1-reliability-curve.json`、`evidence/2026-11-01-r1_2-error-compound.json`、`evidence/2026-11-01-r2_e2e-long-horizon.json` |
+| doc | 2 | 设计空间缺口与 R2.2 记录仍在文档里 | 真解析 `research/02-memory-vs-retrieval/design-space.md`、`README.md` |
+
+其中 18 条 `expr` 全部真调本仓 API 或真解析本仓数据文件，期望值由当前实现现算——改一行实现就可能让它变红，这正是这套题的意义。
+
+### 复算
+
+- 每题的 `verify` 就是复算代码：`python3 eval/run_cases.py` 逐条执行并与 `expected` 比较，改实现后重跑即可看到哪条变红。
+- `python3 eval/run_cases.py --save` 落盘 `eval/run-report.json`（含 total/passed/failed 与按 axis 的失败清单），该文件可由题库重建，不需要手工编辑。
+- `python3 eval/run_cases.py --selftest` 把第一条期望值篡改成不可能值，必须出现 19/20 且 exit 0 —— 证明这套题会红，不是装饰。
+
+### 三条命令
+
+```bash
+python3 eval/run_cases.py             # 20/20，exit 0
+python3 eval/run_cases.py --selftest  # 19/20，exit 0（证明会红）
+make eval                             # 题库 + engineering/memory-system 的 pytest（112 passed）
+```
+
+### 失败归因
+
+`run_cases.py` 不只报总分，失败按 axis 汇总。示例（`--selftest` 的真实输出）：
+
+```text
+19/20 cases passed
+失败归因（按 axis）：
+  api-core: 1 条 —— api-01-stats-count
+```
+
+按 axis 汇总能直接定位是「实现变了」（api-core/retrieval/forgetting/conflict）、「数据文件变了」（evidence）还是「文档承诺漂移」（doc）。
+
 ## License
 
 MIT — Liu Zewen, 2026

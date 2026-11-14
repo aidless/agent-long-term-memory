@@ -173,6 +173,30 @@ npm test          # 103 断言全过
 
 本仓库所有研究结论必须能从 `evidence/` 落盘证据重算。设计文档见 `docs/design/2026-11-01-design.md`。
 
+## 验收标准与复算
+
+本仓判为合格的条件是 `python3 eval/run_cases.py` 通过率必须为 100%（20/20），且 `make eval` 退出码必须为 0；任何一条失败即判为不合格。
+
+题库 `eval/cases.jsonl` 共 20 条七键题（`id/axis/question/expected/mode/verify/source`），按 axis 分：api-core 3（MemoryManager 写入/检索/上下文窗口）、retrieval 3（时间衰减/重要性/混合权重恒等式）、procedural 3（技能成功率/陈化/校准）、forgetting 3（保留分数/遗忘判定/容量淘汰）、conflict 3（冲突检测/对数/保留高重要性）、evidence 3（从 `evidence/*.json` 复算 p^k、复合惩罚、E2E 记忆收益）、doc 2（design-space 缺口与 R2.2 记录仍在）。
+
+18 条 `expr` 每题真调本仓 API 或真解析本仓数据文件，期望值由当前实现现算，改一行实现即可能变红。
+
+```bash
+python3 eval/run_cases.py             # 20/20，exit 0
+python3 eval/run_cases.py --selftest  # 19/20，exit 0（证明会红）
+make eval                             # 题库 + engineering/memory-system 的 pytest（112 passed）
+```
+
+每题 `verify` 即复算代码；`--save` 落盘的 `eval/run-report.json` 可由题库重建。失败按 axis 汇总（失败归因），示例：
+
+```text
+19/20 cases passed
+失败归因（按 axis）：
+  api-core: 1 条 —— api-01-stats-count
+```
+
+详见 `README.md` 同名小节。
+
 ## License
 
 MIT — Liu Zewen, 2026
