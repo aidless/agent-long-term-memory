@@ -11,16 +11,14 @@ from memory.semantic import SemanticMemory
 from memory.episodic import EpisodicMemory
 from memory.procedural import ProceduralMemory
 from memory.working import WorkingMemory
-from manager.extractor import MemoryExtractor, MockLLMExtractor
+from manager.extractor import MockLLMExtractor
 from manager.consolidator import MockLLMConsolidator
 from manager.forgetter import MemoryForgetter, ForgetConfig
-from manager.conflict import ConflictDetector, ConflictConfig
-from manager.associated_forgetter import AssociatedForgetter, AssociationConfig
+from manager.conflict import ConflictDetector
+from manager.associated_forgetter import AssociatedForgetter
 from manager.calibration import (
     ProceduralStalenessDetector,
     ImportanceCalibrator,
-    StalenessConfig,
-    CalibrationConfig,
 )
 from retrieval.hybrid import HybridRetriever, HybridConfig
 from retrieval.semantic_search import SearchResult

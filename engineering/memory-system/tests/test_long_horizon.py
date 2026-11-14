@@ -18,12 +18,8 @@
 不测 LLM 能力。真实 LLM 对照实验见 research/01 的 R1.3 设计。
 """
 
-import time
-import pytest
 
 from manager.memory_manager import MemoryManager
-from memory.base import MemoryItem
-from retrieval.semantic_search import SearchResult
 
 
 class TestLongHorizonMemory:
@@ -87,7 +83,6 @@ class TestLongHorizonMemory:
         1. 无记忆组完成率 ≈ p^k（理论指数衰减）
         2. 有记忆组完成率 ≥ 无记忆组（记忆不损害，且能通过上下文复用提升）
         """
-        import math
         import random
 
         random.seed(42)  # 可复现
@@ -179,7 +174,6 @@ class TestLongHorizonMemory:
             )
 
         # 触发遗忘（低阈值配置，验证高重要性记忆不被遗忘）
-        from manager.forgetter import ForgetConfig
         forgetter = self.manager.forgetter
         # 执行遗忘
         forgotten = self.manager.forget()

@@ -3,7 +3,6 @@
 """
 
 import time
-import pytest
 
 from memory.base import MemoryItem
 from retrieval.semantic_search import SemanticSearch

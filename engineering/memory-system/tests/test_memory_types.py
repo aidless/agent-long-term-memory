@@ -3,9 +3,7 @@
 """
 
 import time
-import pytest
 
-from memory.base import MemoryItem
 from memory.semantic import SemanticMemory
 from memory.episodic import EpisodicMemory
 from memory.procedural import ProceduralMemory

@@ -2,7 +2,6 @@
 测试记忆提取 - 规则提取和 LLM mock 提取。
 """
 
-import pytest
 
 from manager.extractor import MemoryExtractor, MockLLMExtractor
 

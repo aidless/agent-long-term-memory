@@ -37,7 +37,6 @@ import json
 import os
 import random
 from dataclasses import dataclass
-from typing import Optional
 
 
 # ==================== 基准协议实现 ====================
@@ -176,7 +175,7 @@ def main():
     bench = MemoryBenchmark(n_trials=1000, seed=42)
     result = bench.run()
 
-    print(f"\n基准协议：M = P(成功|模糊查询,记忆) - P(成功|模糊查询,纯检索)")
+    print("\n基准协议：M = P(成功|模糊查询,记忆) - P(成功|模糊查询,纯检索)")
     print(f"  精确查询 + 纯检索 = {result['results']['exact_query_pure']:.6f}")
     print(f"  模糊查询 + 纯检索 = {result['results']['fuzzy_query_pure']:.6f}")
     print(f"  精确查询 + 记忆系统 = {result['results']['exact_query_memory']:.6f}")

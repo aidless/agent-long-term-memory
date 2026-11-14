@@ -16,7 +16,6 @@ import os
 import sys
 import time
 import tempfile
-import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -24,8 +23,6 @@ from memory.base import MemoryItem
 from manager.calibration import (
     ProceduralStalenessDetector,
     ImportanceCalibrator,
-    StalenessConfig,
-    CalibrationConfig,
 )
 from manager.memory_manager import MemoryManager
 

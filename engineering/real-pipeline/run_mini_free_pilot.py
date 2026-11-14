@@ -30,7 +30,6 @@ import json
 import os
 import sys
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -348,7 +347,7 @@ def run_one_trace(base: str, model: str, scenario: dict[str, Any], arm: str,
         neg_result = None
         if negotiator is not None:
             nctx = {
-                "agent_id": f"agent_seed0",
+                "agent_id": "agent_seed0",
                 "step": step,
                 "is_privileged": tool in ("python_exec", "sqlite_query"),
                 "target_sensitive": tool in ("http_public", "fs_write"),

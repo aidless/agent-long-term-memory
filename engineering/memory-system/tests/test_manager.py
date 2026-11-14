@@ -3,7 +3,6 @@
 """
 
 import time
-import pytest
 
 from manager.memory_manager import MemoryManager
 from manager.forgetter import MemoryForgetter, ForgetConfig

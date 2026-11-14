@@ -4,7 +4,7 @@ Prompt 构建 - 记忆增强的 Prompt 构建器。
 支持 Token 预算控制和多种注入策略。
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 

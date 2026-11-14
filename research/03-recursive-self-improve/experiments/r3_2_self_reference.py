@@ -32,7 +32,6 @@ import json
 import os
 import random
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass

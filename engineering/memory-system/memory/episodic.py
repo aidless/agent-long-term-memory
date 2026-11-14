@@ -4,7 +4,7 @@
 
 import time
 import uuid
-from typing import Any, Optional
+from typing import Optional
 
 from memory.base import BaseMemory, MemoryItem
 

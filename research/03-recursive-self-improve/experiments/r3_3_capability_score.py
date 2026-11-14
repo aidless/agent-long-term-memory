@@ -32,7 +32,6 @@ import math
 import os
 import random
 from dataclasses import dataclass
-from typing import Optional
 
 
 # ==================== 统计工具 ====================

@@ -148,7 +148,7 @@ def main() -> int:
             print(f"\nCALIBRATION-OPEN: {', '.join(calibration_open)} — formal run blocked")
             print(f"INDEPENDENT-BLOCKED: {', '.join(blocked) if blocked else 'none'}")
             return 1
-        print(f"\nCALIBRATION-CLOSED (C1/C2/C5)")
+        print("\nCALIBRATION-CLOSED (C1/C2/C5)")
         print(f"INDEPENDENT-BLOCKED (C3/C4): {', '.join(blocked) if blocked else 'none'}")
         print("Formal run requires C3/C4 closure + user confirm — NOT ready")
         return 0

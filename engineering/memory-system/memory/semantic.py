@@ -2,9 +2,8 @@
 语义记忆 - 存储事实和知识，基于向量存储的语义检索。
 """
 
-import time
 import uuid
-from typing import Any, Optional
+from typing import Optional
 
 from memory.base import BaseMemory, MemoryItem
 

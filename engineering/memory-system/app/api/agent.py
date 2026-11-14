@@ -10,7 +10,7 @@ from app.models import (
     MessageResponse,
 )
 
-from agent_integration.prompt_builder import PromptBuilder, PromptConfig, InjectionStrategy
+from agent_integration.prompt_builder import PromptBuilder, PromptConfig
 from agent_integration.context_window import ContextWindowManager, ContextWindowConfig
 
 router = APIRouter(prefix="/api/agent", tags=["Agent Integration"])

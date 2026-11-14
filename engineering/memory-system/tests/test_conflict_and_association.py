@@ -13,14 +13,13 @@
 import os
 import sys
 import tempfile
-import pytest
 
 # 确保可导入 engineering/memory-system
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from memory.base import MemoryItem
-from manager.conflict import ConflictDetector, ConflictConfig
-from manager.associated_forgetter import AssociatedForgetter, AssociationConfig
+from manager.conflict import ConflictDetector
+from manager.associated_forgetter import AssociatedForgetter
 from manager.memory_manager import MemoryManager
 
 
